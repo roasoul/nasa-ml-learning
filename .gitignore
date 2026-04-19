@@ -1,0 +1,41 @@
+# Virtual environment
+nasaml/
+
+# Data files (too large for GitHub, regenerated via build_dataset.py)
+data/kepler_tce.pt
+data/raw/
+
+# Model weights (too large for GitHub, regenerated via training notebooks)
+*.pt
+
+# But DO track the source code that generates them
+!src/**/*.py
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Environment / secrets
+.env
+*.env
+credentials.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# lightkurve cache (downloaded FITS files)
+.lightkurve-cache/
+
+# Diagnostic images (generated, not source)
+notebooks/diagnostic_*.png
