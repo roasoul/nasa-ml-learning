@@ -1,0 +1,67 @@
+Device: cuda
+Dataset: 100 TCEs (50 conf, 50 FP)
+Train: 70 (35 conf, 35 FP)
+Val:   14 (7 conf, 7 FP)
+Test:  16 (8 conf, 8 FP)
+
+Model params: 856
+
+Fine-tuning on 70 real TCEs
+  epoch   1  train_loss=0.7018 val_loss=0.7017 train_acc=50.0% val_acc=50.0% A=0.00969 *
+  epoch  10  train_loss=0.6892 val_loss=0.6956 train_acc=50.0% val_acc=50.0% A=0.01187 *
+  epoch  20  train_loss=0.6617 val_loss=0.6413 train_acc=62.9% val_acc=85.7% A=0.01365 *
+  epoch  30  train_loss=0.6376 val_loss=0.5965 train_acc=68.6% val_acc=78.6% A=0.01467 *
+  epoch  40  train_loss=0.6341 val_loss=0.5837 train_acc=64.3% val_acc=78.6% A=0.01530
+  epoch  50  train_loss=0.6350 val_loss=0.5793 train_acc=65.7% val_acc=64.3% A=0.01560
+  epoch  60  train_loss=0.6273 val_loss=0.5621 train_acc=67.1% val_acc=78.6% A=0.01542 *
+  epoch  70  train_loss=0.6289 val_loss=0.5707 train_acc=65.7% val_acc=64.3% A=0.01590
+  epoch  80  train_loss=0.6188 val_loss=0.5706 train_acc=70.0% val_acc=78.6% A=0.01510
+  epoch  90  train_loss=0.6174 val_loss=0.5623 train_acc=68.6% val_acc=78.6% A=0.01502
+  epoch 100  train_loss=0.6199 val_loss=0.5572 train_acc=68.6% val_acc=78.6% A=0.01490
+  epoch 110  train_loss=0.6068 val_loss=0.5516 train_acc=68.6% val_acc=78.6% A=0.01510
+  epoch 120  train_loss=0.6126 val_loss=0.5472 train_acc=68.6% val_acc=78.6% A=0.01504
+  epoch 130  train_loss=0.6048 val_loss=0.5599 train_acc=71.4% val_acc=71.4% A=0.01527
+  epoch 140  train_loss=0.6111 val_loss=0.5498 train_acc=68.6% val_acc=71.4% A=0.01507
+  epoch 150  train_loss=0.6243 val_loss=0.5377 train_acc=64.3% val_acc=78.6% A=0.01513 *
+  epoch 160  train_loss=0.6296 val_loss=0.5456 train_acc=58.6% val_acc=78.6% A=0.01528
+  epoch 170  train_loss=0.5928 val_loss=0.5496 train_acc=71.4% val_acc=78.6% A=0.01549
+  epoch 180  train_loss=0.6054 val_loss=0.5402 train_acc=67.1% val_acc=78.6% A=0.01541
+  epoch 190  train_loss=0.5866 val_loss=0.5365 train_acc=70.0% val_acc=78.6% A=0.01545
+  epoch 200  train_loss=0.6088 val_loss=0.5232 train_acc=67.1% val_acc=78.6% A=0.01516 *
+
+=== V5 Test Set Results (16 TCEs, same as V4) ===
+Accuracy:  81.2%  (V4: 75.0%)
+Precision: 72.7%  (V4: 66.7%)
+Recall:    100.0%     (V4: 100.0%)
+F1:        0.842        (V4: 0.800)
+Best val loss: 0.5232  |  A (best): 0.01516
+
+Confusion matrix:
+                      Pred Planet  Pred Not
+  True Planet              8            0
+  True Not-Planet          3            5
+
+Success criterion: precision > 80% AND recall = 100%
+  precision > 80%:  FAIL (72.7%)
+  recall  = 100%:  PASS (100.0%)
+
+Per-TCE predictions (s_depth = secondary-view minimum in bins 95–105):
+  KOI          true     prob   pred     s_depth   
+  K02842.03    PLANET   0.65   PLANET   -0.0001
+  K00345.01    PLANET   0.66   PLANET   -0.0000
+  K00908.01    PLANET   0.52   PLANET   -0.0000
+  K00507.01    PLANET   0.65   PLANET   -0.0005
+  K01779.02    PLANET   0.60   PLANET   -0.0003
+  K00867.01    PLANET   0.67   PLANET   -0.0000
+  K00949.01    PLANET   0.66   PLANET   -0.0000
+  K01456.01    PLANET   0.54   PLANET   -0.0004
+  K03719.01    FP       0.00   NOT      -0.0457
+  K06481.01    FP       0.01   NOT      -0.0021
+  K05999.01    FP       0.63   PLANET   -0.0011  <-- wrong
+  K00839.01    FP       0.61   PLANET   +0.0000  <-- wrong
+  K01829.01    FP       0.67   PLANET   -0.0001  <-- wrong
+  K01321.01    FP       0.33   NOT      +0.0001
+  K00133.01    FP       0.48   NOT      -0.0002
+  K01178.01    FP       0.06   NOT      -0.0080
+
+Saved V5 model to src/models/taylor_cnn_v5.pt
