@@ -200,25 +200,34 @@ def preprocess_lightcurve(
     period: float,
     epoch: float,
     n_points: int = 200,
-) -> tuple[torch.Tensor, torch.Tensor]:
-    """Apply the full CLAUDE.md preprocessing pipeline.
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Apply the full CLAUDE.md preprocessing pipeline with secondary view.
 
     Pipeline:
         1. flatten()    — remove stellar variability
         2. normalize()  — center flux at 1.0
-        3. fold()       — fold on known period/epoch
+        3a. Primary   fold at epoch             → transit dip at phase=0
+        3b. Secondary fold at epoch + period/2  → any secondary eclipse at phase=0
         4. phase → [-π, π]
         5. flux -= 1.0  — baseline at 0
-        6. phase-bin to n_points
+        6. phase-bin each view to n_points
+
+    The secondary view is V5's addition. For a circular EB, the secondary
+    eclipse sits half an orbit after the primary. Re-folding at the shifted
+    epoch places that secondary dip at phase=0, mirroring the primary
+    view's layout so the CNN can compare them channel-by-channel.
+    Planets produce a flat secondary view (no second eclipse); EBs produce
+    a clear dip.
 
     Args:
         lc: Raw lightkurve LightCurve object.
         period: Orbital period in days.
         epoch: Transit epoch in BKJD (same time system as light curve).
-        n_points: Number of output phase bins.
+        n_points: Number of output phase bins per view.
 
     Returns:
-        Tuple of (phase, flux) tensors, each shape (n_points,).
+        Tuple of (phase, primary_flux, secondary_flux) tensors, each
+        shape (n_points,). Phase in [-π, π]; both fluxes baseline-at-0.
     """
     # Step 1: Flatten — remove long-term stellar variability and
     # instrumental trends using a Savitzky-Golay filter. window_length
@@ -228,28 +237,43 @@ def preprocess_lightcurve(
     # Step 2: Normalize — divide by median flux so baseline ≈ 1.0
     lc_norm = lc_flat.normalize()
 
-    # Step 3: Fold — phase-fold on the known orbital period and epoch.
-    # After folding, the transit is centered at phase = 0.
-    folded = lc_norm.fold(period=period, epoch_time=epoch)
-
-    # Step 4: Scale phase to [-π, π].
-    # folded.time gives phase in units of days (range: -period/2 to +period/2).
-    # Dividing by period gives [-0.5, 0.5], then × 2π gives [-π, π].
-    phase_days = folded.time.value  # days
-    phase_scaled = (phase_days / period) * 2.0 * np.pi  # [-π, π]
-
-    # Step 5: Subtract 1.0 from flux so baseline = 0 and dip is negative
-    flux_centered = folded.flux.value - 1.0
-
-    # Step 6: Phase-bin to n_points using median in each bin.
-    # Median is more robust to outliers than mean.
-    phase_binned, flux_binned = phase_bin(
-        phase_scaled, flux_centered, n_points
+    # Step 3a: Primary fold — transit at phase=0.
+    primary_phase, primary_flux = _fold_and_bin(
+        lc_norm, period=period, epoch_time=epoch, n_points=n_points
     )
 
+    # Step 3b: Secondary fold — shift epoch by half a period so any
+    # secondary eclipse appears at phase=0 in this view. For circular
+    # orbits this is exact; for mildly eccentric orbits the secondary
+    # may be slightly offset in phase but typically still within the bin.
+    secondary_flux_phase, secondary_flux = _fold_and_bin(
+        lc_norm, period=period, epoch_time=epoch + period / 2.0, n_points=n_points
+    )
+
+    # primary_phase and secondary_flux_phase are identical grids — return
+    # one. The CNN only needs the phase axis once; flux is per-view.
+    return primary_phase, primary_flux, secondary_flux
+
+
+def _fold_and_bin(
+    lc_norm: lk.LightCurve,
+    period: float,
+    epoch_time: float,
+    n_points: int,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Fold a normalized LC at a given epoch and return (phase, flux) tensors.
+
+    Handles steps 3–6 of the preprocessing pipeline. Factored out so the
+    primary and secondary views use identical math (only epoch differs).
+    """
+    folded = lc_norm.fold(period=period, epoch_time=epoch_time)
+    phase_days = folded.time.value
+    phase_scaled = (phase_days / period) * 2.0 * np.pi  # [-π, π]
+    flux_centered = folded.flux.value - 1.0  # baseline at 0
+
+    phase_binned, flux_binned = phase_bin(phase_scaled, flux_centered, n_points)
     phase_tensor = torch.tensor(phase_binned, dtype=torch.float32)
     flux_tensor = torch.tensor(flux_binned, dtype=torch.float32)
-
     return phase_tensor, flux_tensor
 
 
@@ -287,7 +311,7 @@ def phase_bin(
 def download_and_preprocess(
     target: dict,
     n_points: int = 200,
-) -> tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """Download and preprocess a single target end-to-end.
 
     Args:
@@ -295,10 +319,11 @@ def download_and_preprocess(
         n_points: Number of output phase bins.
 
     Returns:
-        Tuple of (phase, flux) tensors, each shape (n_points,).
+        Tuple of (phase, primary_flux, secondary_flux) tensors,
+        each shape (n_points,).
     """
     lc = download_lightcurve(target["kepid"])
-    phase, flux = preprocess_lightcurve(
+    phase, primary_flux, secondary_flux = preprocess_lightcurve(
         lc, target["period"], target["epoch"], n_points
     )
-    return phase, flux
+    return phase, primary_flux, secondary_flux

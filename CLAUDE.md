@@ -5,7 +5,7 @@ This is a personal ML/AI learning project. All code here is independent of my
 employer (MathWorks). I retain full IP ownership of everything in this repo.
 
 **Goal:** Build ML/AI skills targeting a NASA Force AI/ML or Data role.
-**Current phase:** 3Blue1Brown Neural Networks → Transformers + Vizuara → Projects
+**Current phase:** Light Curve Classifier V5 complete → V6 scale-up
 **Degree:** MS AI Engineering at Quantic (starting June 2025)
 
 ---
@@ -16,295 +16,321 @@ C:\Users\skapa\Projects\ml-learning\nasa-ml-learning\
 ├── CLAUDE.md
 ├── requirements.txt
 ├── nasaml\                   # Virtual environment — never edit
-├── notebooks\                # Jupyter exploration notebooks
+├── notebooks\
 │   ├── 00_installation_test.ipynb
-│   ├── 01_taylor_gate_verification.ipynb
-│   ├── 02_taylor_cnn_training.ipynb
-│   ├── 03_real_kepler_data.ipynb
-│   └── 04_real_data_training.ipynb
-├── src\                      # Reusable modules and scripts
-│   ├── data\                 # Data loading and preprocessing
-│   │   ├── synthetic.py      # Synthetic light curve generator
-│   │   ├── kepler.py         # Kepler download + preprocessing pipeline
-│   │   └── build_dataset.py  # Batch TCE download → cached .pt file
-│   ├── models\               # Model definitions
-│   │   ├── taylor_layer.py   # Custom Taylor gate (cos-based)
-│   │   ├── taylor_cnn.py     # Two-channel PINN classifier
-│   │   └── taylor_cnn_kepler.pt  # Trained weights (real Kepler data)
-│   └── utils\                # Helper functions
-├── projects\
-│   ├── light_curve\          # Kepler/TESS exoplanet transit classifier
-│   └── doc_assistant\        # Technical documentation RAG tool
-└── data\                     # Raw and processed datasets (not committed)
-    └── kepler_tce.pt         # Cached preprocessed TCE dataset (100 TCEs)
+│   ├── 01_taylor_gate_verification.ipynb   ✅ complete
+│   ├── 02_synthetic_training.ipynb          ✅ complete
+│   ├── 03_real_kepler_data.ipynb            ✅ complete
+│   ├── 04_real_data_training.ipynb          ✅ complete
+│   └── 05_secondary_view.ipynb              ✅ complete (V5)
+├── src\
+│   ├── data\
+│   │   ├── synthetic.py        ✅ 3-class generator (planet/EB/non-transit)
+│   │   ├── kepler.py           ✅ primary + secondary fold pipeline
+│   │   └── build_dataset.py    ✅ saves fluxes_secondary
+│   ├── models\
+│   │   ├── taylor_layer.py     ✅ TaylorGateFunction + TaylorGateLayer
+│   │   ├── taylor_cnn.py       ✅ 3-channel TaylorCNN (V5, 856 params)
+│   │   └── taylor_cnn_v5.pt    ✅ V5 trained weights
+│   └── utils\
+├── scripts\
+│   └── run_v5.py               ✅ V5 training/eval script
+└── data\                     # NOT committed — rebuild with build_dataset.py
+    └── kepler_tce.pt          100 TCEs w/ primary + secondary flux
 ```
 
 ---
 
 ## Environment Setup (Windows)
 ```bash
-# Navigate to project
 cd C:\Users\skapa\Projects\ml-learning\nasa-ml-learning
-
-# Activate virtual environment
 nasaml\Scripts\activate
-
-# Verify GPU
 python -c "import torch; print(torch.cuda.is_available())"
 
-# Launch Jupyter
-jupyter notebook notebooks\
-
-# Run tests
-pytest tests\
-
-# Install new packages — ALWAYS use PyPI explicitly
-# (machine has a rogue Artifactory config that intercepts pip)
+# Install packages — ALWAYS use PyPI explicitly (rogue Artifactory config)
 pip install <package> --index-url https://pypi.org/simple/
 
-# PyTorch specifically — RTX 5060 is Blackwell (sm_120), needs nightly cu128
+# PyTorch — RTX 5060 Blackwell (sm_120) needs nightly cu128
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu128
-
-# Save environment
 pip freeze > requirements.txt
 ```
 
 ---
 
 ## Hardware
-- **GPU:** NVIDIA GeForce RTX 5060 Laptop GPU (Blackwell architecture, sm_120)
-- **VRAM:** 8GB
-- **CUDA:** 12.8
-- **Driver:** 591.74
-- **PyTorch:** 2.12.0.dev (nightly) — required for sm_120 Blackwell support
-- **Note:** Standard stable PyTorch only supports up to sm_90 — always use nightly cu128
+- **GPU:** NVIDIA GeForce RTX 5060 Laptop (Blackwell, sm_120), 8GB VRAM
+- **CUDA:** 12.8 / Driver: 591.74
+- **PyTorch:** 2.12.0.dev nightly — required for sm_120 support
 
 ---
 
-## Installed Libraries (all verified working)
-- **torch 2.12.0 / torchvision / torchaudio** — PyTorch with CUDA 12.8 (nightly)
-- **numpy 2.4.3** — array operations
-- **pandas 2.3.3** — data manipulation
-- **matplotlib 3.10.8** — visualization
-- **scikit-learn 1.8.0** — classical ML
-- **jupyter / notebook** — exploration
-- **lightkurve 2.6.0** — NASA Kepler/TESS light curve data
-- **astropy 7.2.0** — astronomical data handling
-- **transformers / datasets** — HuggingFace (for later)
-- **sentence-transformers** — embeddings (for later)
+## Installed Libraries
+- torch 2.12.0 / torchvision / torchaudio (CUDA 12.8 nightly)
+- numpy 2.4.3 / pandas 2.3.3 / matplotlib 3.10.8 / scikit-learn 1.8.0
+- lightkurve 2.6.0 / astropy 7.2.0
+- jupyter / transformers / sentence-transformers
 
 ---
 
 ## Known Issues & Fixes
-- **Artifactory pip error:** Machine has a rogue corporate pip config. Always use
-  `--index-url https://pypi.org/simple/` flag when installing packages.
-- **Blackwell GPU (sm_120):** Stable PyTorch doesn't support RTX 5060. Use nightly
-  cu128 build. Switch to stable channel once official Blackwell support ships.
-- **lightkurve warning:** `oktopus not installed` warning on import is harmless —
-  only needed for advanced PRF fitting, not required for transit classification.
-- **lightkurve preprocessing pipeline:** Always follow this sequence before passing
-  data to any model:
-  1. `lc.flatten(window_length=401)` — remove stellar variability
-  2. `.normalize()` — center flux at 1.0
-  3. `.fold(period, epoch_time)` — fold on known or candidate period
-  4. Scale phase to [-π, π] via `(folded.time.value / period) * 2π`
-  5. Subtract 1.0 from flux — so baseline = 0 and transit dip is negative
-  6. Phase-bin to 200 points using median per bin
-  Skipping any step will cause the Taylor approximation to diverge or produce
-  meaningless gradients.
-- **remove_outliers destroys transits:** NEVER use `lc.remove_outliers(sigma=5)` —
-  it clips transit dips (which are 5–50 sigma deep) along with real outliers.
-  Always use `remove_outliers(sigma_lower=float('inf'), sigma_upper=5)` to clip
-  only upward outliers (cosmic rays) and preserve downward dips (transits).
-- **Taylor gate phase alignment (sin→cos fix):** The original sin(x) gate
-  `min(0, -A*(x - x³/6))` placed its dip at phase π/2, but fold() centers
-  transits at phase 0. This 90-degree misalignment was fixed by switching to
-  cos(x): `min(0, -A*(1 - x²/2))`, which has its dip at phase 0. Any future
-  Taylor layer work must use cos(x) as the base function, not sin(x).
-- **BatchNorm required before Conv1d on flux data:** Transit flux values are
-  ~0.01 (1%) but Conv1d weights initialize at ~0.1. Without BatchNorm, gradients
-  are too small and the model stalls at 50% accuracy. Always add
-  `nn.BatchNorm1d(n_channels)` before the first Conv1d layer.
+
+### pip
+- Artifactory intercepts pip — always use `--index-url https://pypi.org/simple/`
+- lightkurve oktopus warning on import is harmless
+
+### Preprocessing (CRITICAL)
+```python
+# CORRECT order — always follow this exactly
+lc.flatten(sigma_upper=4, sigma_lower=10)  # asymmetric — protects dip
+.normalize()
+.fold(period, epoch_time)
+# then scale phase to [-pi, pi] and subtract 1.0 so baseline=0, dip=negative
+```
+- Default sigma clipping DELETES transit dips — use sigma_lower=10
+- Apply outlier removal AFTER folding, never before
+
+### Taylor Gate (CRITICAL)
+```
+sin(x) dip at pi/2 = 1.57 rad  →  WRONG (misaligned with fold center)
+cos(x) dip at 0                 →  CORRECT (fold centers transit at 0)
+
+Forward:  y = min(0, -A * (1 - x**2/2))
+Backward: grad_A = -(1 - x**2/2) * mask
+Mask:     1 in dip (output < 0), 0 at baseline
+```
+
+### Training
+- BatchNorm essential before Conv1d — transit depths ~1% produce tiny gate
+  outputs. Without BN, gradients ~0.001, accuracy stuck at 50%.
+- Always fine-tune on real Kepler TCEs — synthetic-only model gets ~50% on real data
+- EB false positives are expected — binary classifier needs secondary eclipse
+  view to distinguish planets from eclipsing binaries
+
+### V5 Known Issues
+- **Synthetic pretraining BN running-stats mismatch.** Pretraining on synthetic
+  3-class data then fine-tuning on real Kepler causes fine-tune loss to start
+  at ~1.9 (worse than chance) and never recover. BatchNorm running stats
+  computed on synthetic data don't match real-data distribution. Taylor A also
+  overshoots to ~0.08 during pretrain (tuned for synthetic 1-2% depths) and
+  can't anneal back to real-data optimum (~0.015).
+  **Fix for V6:** reset BN running stats with `model.cnn[0].reset_running_stats()`
+  between pretrain and finetune, OR match synthetic depth distribution to
+  real Kepler depth histogram (median ~1300 ppm, not 1-2%).
+- **3 surviving FPs on 16-TCE test are non-EB.** K05999.01, K00839.01,
+  K01829.01 have flat secondary channels (~0 dip at phase=0) — they are FPs
+  for reasons unrelated to eclipsing binaries (stellar activity, centroid
+  offsets, V-shape grazing transits, instrumental artifacts). Secondary-view
+  classification cannot catch them.
+  **Fix for V6:** add centroid-offset check, odd/even transit depth comparison,
+  or V-shape transit analysis as additional channels.
 
 ---
 
 ## Code Conventions
-- **Language:** Python 3.11+
-- **Style:** PEP 8, 4-space indentation
-- **Typing:** Use type hints on all function signatures
-- **Docstrings:** Google style — every function and class gets one
-- **Naming:** `snake_case` for variables/functions, `PascalCase` for classes
-- **Notebooks:** Use for exploration only — production code goes in `src\`
-
----
+- Python 3.11+, PEP 8, type hints, Google docstrings
+- snake_case variables/functions, PascalCase classes
+- Notebooks for exploration only — production code in src/
 
 ## Safety Rules
-- **Never commit** `.env`, `data\raw\`, or any file containing API keys
-- **Never edit** anything inside `nasaml\`
-- **Never use** work resources, work data, or MathWorks IP in this repo
-- **Always activate** nasaml venv before installing or running anything
-- **Always use** `--index-url` flags when installing (see Known Issues above)
+- Never commit .env, data/raw/, API keys, or kepler_tce.pt
+- Never edit nasaml/ venv
+- Never use MathWorks work resources or IP
+- Always activate nasaml venv before running anything
 
 ---
 
 ## Active Projects
 
-### 1. Light Curve Classifier (Current Focus)
-- **Goal:** Classify Kepler/TESS exoplanet transit signals using a
-  Physics-Informed Neural Network (PINN)
-- **Data:** Kepler TCE (Threshold Crossing Events) via `lightkurve`
-- **Benchmark comparisons:**
-  - AstroNet (Shallue & Vanderburg 2018) — primary ML baseline
-  - BLS (Box Least Squares) — standard non-ML baseline used by Kepler team itself
-- **Status:** V4 built and trained on real Kepler TCEs (Sessions 1–4 complete)
+### 1. Light Curve Classifier — Taylor-CNN PINN
 
-#### Architecture: Two-Channel PINN (V4 — implemented)
+#### Current Status: V5 Complete ✅
 
+| Metric | V4 | **V5** | AstroNet (2018) |
+|---|---|---|---|
+| Accuracy | 75.0% | **81.2%** | 96% |
+| Precision | 66.7% | **72.7%** | — |
+| Recall | 100.0% | **100.0%** | — |
+| F1 | 0.800 | **0.842** | — |
+| Training data | 70 TCEs | 70 TCEs | 15,000 TCEs |
+| Parameters | 798 | **856** | ~30,000 |
+| Learned A | 0.013 | 0.015 | — |
+
+100% recall retained. V5 caught 5 of 8 test FPs including the 2 clearest EBs
+(K03719.01 s_depth=-0.046 → prob=0.00, K01178.01 s_depth=-0.008 → prob=0.06).
+3 surviving FPs have flat secondary channels — non-EB failure modes, see V6.
+
+#### Architecture (V5)
 ```
-phase (B, 200)    flux (B, 200)
-      │                 │
-      ▼                 │
-  TaylorGate            │
-  min(0, -A·cos(x))     │
-  → gate_out (B, 200)   │
-      │                 │
-      ▼                 ▼
-  stack → (B, 2, 200)  [ch0=gate, ch1=flux]
-      │
-  BatchNorm1d(2)
-  Conv1d(2→8, k=7) + ReLU
-  Conv1d(8→16, k=5) + ReLU
-  AdaptiveAvgPool1d → (B, 16)
-      │
-  Linear(16, 1) → sigmoid → P(transit)
+phase          → Taylor Gate: min(0, -A*(1 - x²/2)) ──┐
+primary_flux   ───────────────────────────────────────┼→ stack (B,3,200) → BatchNorm
+secondary_flux ───────────────────────────────────────┘   → Conv1d(3→8) → Conv1d(8→16)
+                                                          → AvgPool → Linear(16→1) → Sigmoid
 ```
 
-**Total parameters:** 798
-**Saved weights:** `src/models/taylor_cnn_kepler.pt`
+#### Next Session: V6 — Scale-up + fix pretrain
 
-#### Custom Taylor Layer — Key Details
-- **Forward:** `output = min(0, -A * (1 - x²/2))` where x is scaled phase
-- **Backward:** `grad_x = upstream_grad * A * x * mask`
-              `grad_A = upstream_grad * (-(1 - x²/2)) * mask`
-- **Mask:** 1 where output < 0 (dip region), 0 elsewhere — prevents dead gradients
-- **Learnable parameters:** A (amplitude/depth)
-- **Dip shape:** centered at x=0, zero-crossings at x = ±√2 ≈ ±1.41 rad
-- **Why cos(x):** cos(x) ≈ 1 - x²/2 has its maximum at x=0, so -A·cos(x) has
-  its dip at x=0 — exactly where fold() centers the transit. The original sin(x)
-  version placed the dip at x=π/2, causing a 90-degree misalignment.
-- **Why two channels:** The CNN receives both the gate model (physics) and the raw
-  flux as a 2-channel input. Its first-layer filters learn to compare them —
-  implicitly computing the residual plus any other useful comparison.
+**V6 starter prompt for Claude Code:**
+```
+V5 is complete — 81.2% accuracy, 72.7% precision, 100% recall on 16 real
+Kepler TCEs. 3 surviving FPs are non-EB (flat secondary channel). V6 goals:
+1) Scale dataset to 500+ TCEs from Kepler DR25 so the test set has a
+   representative FP mix. Apply data augmentation (depth ±20%, phase
+   jitter, noise, time reversal) during training.
+2) Fix synthetic pretraining: reset BatchNorm running stats between
+   pretrain and finetune, OR match synthetic depth distribution to real
+   Kepler (median 1300 ppm). Validate pretrain → finetune beats from-
+   scratch on the larger test set.
+3) Optional stretch: add centroid-offset channel to address remaining
+   non-EB FPs.
+Target: precision > 80% AND recall = 100% on the 500+-TCE test set.
+```
 
-#### Test Results (Session 4 — Real Kepler Data)
+**Other V6 improvements (priority order):**
+1. Scale to 500+ TCEs + data augmentation (highest impact on test-set
+   composition; makes precision target reachable)
+2. Fix synthetic pretraining BN/depth mismatch
+3. Higher-order Taylor: `min(0, -A*(1 - x²/2 + x⁴/24))` for flat-bottom
+   dips (hot Jupiters, grazing transits)
+4. Centroid-offset channel for non-EB FPs
+5. BLS baseline comparison for paper
 
-| Metric | Taylor-CNN | AstroNet (2018) |
-|--------|-----------|-----------------|
-| Accuracy | 75.0% | 96% |
-| Precision | 66.7% | — |
-| Recall | 100.0% | — |
-| F1 | 0.800 | — |
-| Training data | 70 TCEs | 15,000 TCEs |
-| Parameters | 798 | ~30,000 |
-| Input views | 1 (local) | 3 (global+local+secondary) |
+#### Two-Channel Architecture (V3 — after V5)
+```
+Raw light curve
+  ├── Channel 1: Taylor Gate → physics model
+  └── Channel 2: Residual = raw - physics → 1D CNN → detects TTVs, spots
+                                          → Linear Fusion → Transit / No Transit
+```
 
-100% recall means no confirmed planet was missed. The 4 false positives
-predicted as transit are likely eclipsing binaries with real dip-shaped signals
-that require secondary eclipse data to distinguish from planets.
+#### ECG Extension (after transit work)
+- RLC physical model: R-peak = inductive (sin terms), T-wave = capacitive (alternating)
+- Inductive: A*(x - x³/6) | Capacitive: B*(1 - x + x²/2) | Asymmetry: C*x²
+- Datasets: PTB-XL + MIT-BIH | Baseline: Ribeiro 2020 (Nature Comms)
+- Paper: cross-domain generalization of physics-informed Taylor layer
 
-#### Planned ECG Extension
-- Same Taylor layer architecture generalizes to ECG QRS complex classification
-- QRS complex morphologically equivalent to transit dip (half-wave rectifier shape)
-- Dataset: PTB-XL (21,837 12-lead ECGs, free on PhysioNet)
-- Baseline: Ribeiro et al. 2020 (Nature Communications) — 1D ResNet on 2M ECGs
-- Goal: Cross-domain paper demonstrating architecture generalization
-
-#### Key Papers (all free on arxiv.org)
-- AstroNet — arxiv.org/abs/1712.05044
-- ExoMiner — arxiv.org/abs/2111.10009
-- Astronet-Triage-v2 — arxiv.org/abs/2301.01371
-- ExoMiner++ 2.0 — arxiv.org/abs/2601.14877
-- ExoSpikeNet — arxiv.org/abs/2406.07927
-- Ribeiro ECG ResNet — arxiv.org/abs/1904.01949
+#### Key Papers
+- AstroNet: arxiv.org/abs/1712.05044
+- ExoMiner: arxiv.org/abs/2111.10009
+- Ribeiro ECG: arxiv.org/abs/1904.01949
 
 #### Research Questions
-1. Does the Taylor layer improve precision over AstroNet and BLS?
-2. Does Taylor term count (2 vs 3 vs 4) act as a physically meaningful hyperparameter?
-3. Does the two-channel residual approach detect TTVs and spot crossings?
-4. Does the architecture generalize from Kepler → TESS without retraining?
-5. Does the same layer work for ECG QRS classification (cross-domain)?
+1. Does secondary eclipse view eliminate EB false positives?
+2. Does Taylor term count act as a physically meaningful hyperparameter?
+3. Does two-channel residual detect TTVs and spot crossings?
+4. Does architecture generalize Kepler → TESS without retraining?
+5. Does same layer work for ECG QRS classification?
 
 ---
 
 ### 2. Technical Documentation Assistant (Next)
-- **Goal:** RAG pipeline over NASA technical documentation
-- **Stack:** Sentence Transformers + vector DB + LLM
-- **Status:** Planned — Phase 4 (embeddings phase)
+- Goal: RAG pipeline over NASA technical documentation
+- Stack: Sentence Transformers + vector DB + LLM
+- Status: Planned — Phase 4
 
 ---
 
 ## Learning Milestones
-- [x] 3Blue1Brown — Essence of Linear Algebra
-- [x] 3Blue1Brown — Essence of Calculus
-- [x] ML environment set up and verified (GPU confirmed working)
-- [ ] 3Blue1Brown — Neural Networks (4 videos)        <- YOU ARE HERE
-- [ ] 3Blue1Brown — Transformers (chapters 5-7)        <- in parallel with Vizuara
-- [ ] Vizuara — Foundations for ML                     <- in parallel with Transformers
-- [ ] VanderPlas — Statistics, Data Mining & ML in Astronomy (after above)
-- [x] Light Curve Classifier V4 — built and trained on real Kepler TCEs
-- [ ] Sentence Transformers + embeddings
+- [x] 3Blue1Brown — Linear Algebra
+- [x] 3Blue1Brown — Calculus
+- [x] ML environment set up (GPU verified)
+- [x] 3Blue1Brown — Neural Networks videos 1-3
+- [x] Taylor-CNN PINN V4 — 100% recall on real Kepler data ✅
+- [x] Taylor-CNN PINN V5 — secondary eclipse view, F1 0.842 ✅
+- [ ] 3Blue1Brown — Neural Networks video 4
+- [ ] 3Blue1Brown — Transformers (chapters 5-7)
+- [ ] Vizuara — Foundations for ML
+- [ ] VanderPlas — Astronomy ML book
+- [ ] Light Curve Classifier V6 (scale to 500+ TCEs)
 - [ ] Quantic MS AI Engineering (June 2025)
 
 ---
 
 ## NASA Force Target
-- **URL:** nasa.gov/careers/nasaforce
-- Signed up for email updates — role windows are short (first window was 4 days)
-- Target roles: AI/ML Engineer, Data/IT (first opening was aerospace only)
-- Portfolio goal: light curve classifier + doc assistant as flagship projects
-- Books: VanderPlas astronomy ML book (owned, to read after Vizuara)
+- nasa.gov/careers/nasaforce — signed up for updates
+- Target: AI/ML Engineer or Data/IT roles
+- Portfolio: light curve classifier + doc assistant
 
 ---
 
 ## Claude Code Usage Notes
-- Always explain concepts, not just write code — learning is the primary goal
-- Add line-by-line comments on any non-obvious code
-- Always explain WHY something works, not just WHAT it does
-- Prefer building from scratch over copying boilerplate — builds intuition
-- When implementing the custom Taylor layer, walk through the math before coding
-- Use Claude.ai (chat) for concepts, strategy, architecture decisions
-- Use Claude Code (terminal) for building, debugging, iterating, and running code
+- Explain concepts not just code — learning is the goal
+- Line-by-line comments on non-obvious code
+- Always explain WHY, not just WHAT
+- Build from scratch over boilerplate — builds intuition
+- Walk through math before coding any new layer
+- Claude.ai → concepts, strategy, architecture
+- Claude Code → building, debugging, iterating
 
 ---
 
-## Next Session Prompt — V4 Improvements
-
-The V4 Taylor-CNN is built and trained. Current accuracy is 75% on 100 real
-Kepler TCEs (vs AstroNet 96%). The next session should focus on closing this
-gap. Copy and paste into Claude Code:
+## Version Roadmap
 
 ```
-The V4 Taylor-CNN (cos gate) is trained on 100 real Kepler TCEs with 75%
-accuracy, 100% recall, 66.7% precision, F1=0.800. Weights are saved at
-src/models/taylor_cnn_kepler.pt. The main weakness is 4 false positives
-(likely eclipsing binaries) predicted as transit.
-
-Next steps to improve accuracy toward AstroNet's 96%:
-1. Scale up training data — download 500+ TCEs using build_dataset.py
-2. Add a secondary eclipse view as a third CNN input channel (this is
-   how AstroNet distinguishes EBs from planets)
-3. Try higher-order Taylor terms (1 - x²/2 + x⁴/24) as a hyperparameter
-4. Add data augmentation (noise injection, phase jitter)
-5. Evaluate on the Autovetter Planet Candidate Catalog for direct
-   AstroNet comparison
-
-Start with #1 (more data) and #2 (secondary eclipse channel) as these
-will have the biggest impact on precision.
+V4  ✅  Taylor gate + 1D CNN (COMPLETE — 100% recall)
+V5  ✅  + Secondary eclipse view (COMPLETE — F1 0.842, +6.2% acc)
+V6  ⬜  + Scale to 500+ TCEs + data augmentation + fix BN pretrain
+V7  ⬜  + Kepler loss function (global physics as SOFT penalty)
+        L_total = L_class + λ·L_Kepler + λ·L_sparsity
+V8  ⬜  Physics Stack Neural Network (PSNN)
+        Taylor Gate (local) → Kepler Gate (global) → CNN
+        Compare PINN (V7) vs PSNN (V8) — does hard gate beat soft?
 ```
 
-### Completed Sessions
-1. **Session 1:** Taylor gate verified on synthetic data (baseline=0, gradients pass)
-2. **Session 2:** Two-channel CNN connected, 94.5% val accuracy on synthetic data
-3. **Session 3:** Real Kepler pipeline built, remove_outliers bug found and fixed
-4. **Session 4:** sin→cos gate fix (90° misalignment), trained on 100 real TCEs,
-   75% accuracy / 100% recall / F1=0.800
+### V8 PSNN Architecture
+```
+Raw light curve
+      ↓
+Layer 1: Taylor Gate     → LOCAL physics (dip morphology)
+      ↓
+Layer 2: Kepler Gate     → GLOBAL physics (orbital mechanics)
+         Learnable: stellar density ρ*, impact parameter b,
+                    limb darkening u
+         Hard gate: suppresses physically impossible orbits
+                    BEFORE CNN sees them
+      ↓
+Layer 3: 1D CNN          → LEARNED features (residual patterns)
+      ↓
+Sigmoid                  → Transit / No Transit
+```
+
+### Key research question for V7 vs V8:
+Does enforcing Kepler's Laws as a hard gate (V8 layer) outperform
+enforcing them as a soft loss penalty (V7)? This comparison is the
+paper's central experiment.
+
+### V8 Session Starter Prompt
+```
+V7 is complete with Kepler loss function. Now implement V8 PSNN:
+Add a KeplerGateLayer after the Taylor gate. The layer receives
+(period, duration, depth) and computes a consistency score using
+Kepler's Third Law. Learnable parameters: stellar density rho_star,
+impact parameter b. Output attenuates the signal proportionally to
+orbital consistency. Compare V7 vs V8 on same test set.
+```
+
+### V9: Multi-Template Gate Bank
+```
+Instead of one Taylor gate, N parallel gates each tuned to
+a different physical dip morphology:
+
+Gate 1: min(0, -A1*(1 - x²/2))    → planet transit (symmetric)
+Gate 2: min(0, -A2*(x - x³/6))    → EB primary (asymmetric)
+Gate 3: max(0,  A3*(1 - x²/2))    → secondary eclipse (inverted)
+Gate 4: min(0, -A4*box(x))         → grazing transit (flat bottom)
+Gate 5: min(0, -A5*gaussian(x))    → spot crossing (narrow)
+
+CNN input: (B, N, 200) — stack of N gate outputs
+CNN just reads which gates fired → trivial classification
+Replaces ExoMiner's 6 input views with 1 input + N physics gates
+```
+
+### Full version roadmap
+```
+V4  ✅  Single Taylor gate (COMPLETE — 100% recall, 798 params)
+V5  ✅  + Secondary eclipse view (COMPLETE — F1 0.842, 856 params)
+V6  ⬜  + 500+ TCEs + augmentation + BN pretrain fix
+V7  ⬜  + Kepler LOSS (soft penalty)
+V8  ⬜  + Kepler GATE (hard gate) = PSNN
+V9  ⬜  + Multi-template gate bank (N parallel Taylor gates)
+        Compare V4→V9 ablation study = the paper
+```
