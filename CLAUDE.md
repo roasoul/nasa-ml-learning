@@ -128,6 +128,12 @@ Mask:     1 in dip (output < 0), 0 at baseline
   **Fix for V6:** add centroid-offset check, odd/even transit depth comparison,
   or V-shape transit analysis as additional channels.
 
+### V8/V8.5/V9 paper draft: `docs/paper/v9_findings.md`
+Full narrative with unifying root-cause section (Kepler-pipeline Mandel-
+Agol bias contaminates every primary-fold shape metric), aggregate
+feature-separation table, both SS-flag validation variants (v1 closed-
+form, v2 scipy bounded), V8 gradcheck analysis, and V10 direction.
+
 ### V9 Null Result — DynamicGeometryLoss hurts because penalty is inverted for this data
 - **Sweep:** lambda_max ∈ {0.1, 0.5, 1.0}. BCE + 0.01·|B| +
   DynamicGeometryLoss (SNR pivot 12.0). 4-channel CNN unchanged
@@ -161,6 +167,17 @@ Mask:     1 in dip (output < 0), 0 at baseline
   `prob·auc_norm` instead), but that's a new experiment — and the
   broader lesson is that a single global B cannot encode a per-sample
   morphology signal. The next step is structural, not loss-tuning.
+- **Root cause (unifying V7 → V9):** the Kepler TCE pipeline fits a
+  Mandel-Agol *planet* model to every candidate including EBs.
+  Archive `koi_duration` (V7), archive folded-flux shape (V8, V8.5),
+  shape penalties derived from that flux (V9), and per-sample B fits
+  on the primary fold (SS-flag v1 and v2) all inherit that bias:
+  EB primaries look planet-consistent in both duration and morphology
+  when viewed through the pipeline. The EB signal the pipeline
+  removed, the downstream model cannot recover — regardless of how
+  we repackage it. The remaining signal lives in secondary-eclipse
+  depth, odd/even transit depth, and centroid motion (pixel-level
+  data, not the folded LC).
 - **SS-flag v2 (scipy curve_fit, bounded):** Per-sample B fit on
   dip-only samples with bounds B ∈ [−2, 2], A ∈ [0, 0.1]. Result:
     - SS=0 (not EB): n=285, median B = +1.212
@@ -527,9 +544,15 @@ V7.5 ✅  Safe hard Kepler gate at thr=1.0 — zero planet risk
 V8   ⚠   Learnable B curvature + t0 offset — F1 0.795, gradcheck PASS
 V8.5 ⚠   V8 + 5 shape features (primary_flux, normalized masks) — F1 0.786
 V9   ⚠   DynamicGeometryLoss (SNR-weighted shape + AUC penalty) —
-         NULL RESULT, best F1 0.765 at lambda=0.5
+         NULL RESULT, best F1 0.765 at lambda=0.5. Root-cause
+         unified with V7: Kepler pipeline Mandel-Agol bias
+         contaminates every primary-fold shape metric.
 V10  ⬜  Next: multi-template Taylor-gate bank (N parallel gates),
          each tuned to a distinct dip morphology. Per-sample gate
          selection replaces the single-B-population-average problem.
-         Compare V4→V10 ablation study = the paper
+         If the gate bank also null-results, the signal is simply
+         not in the primary fold and V10.x should add secondary-
+         eclipse / odd-even depth / centroid-motion channels.
+         Compare V4→V10 ablation study = the paper.
+         (Fresh V10 prompt to be generated next session.)
 ```
