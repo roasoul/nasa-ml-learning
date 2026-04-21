@@ -130,6 +130,13 @@ Mask:     1 in dip (output < 0), 0 at baseline
   **Fix for V6:** add centroid-offset check, odd/even transit depth comparison,
   or V-shape transit analysis as additional channels.
 
+### V10 paper draft: `docs/paper/v10_findings.md`
+Full write-up with ablation table (V4→V10), per-TCE V6 vs V10
+diagnostic identifying the 8 FPs V10 catches and the 2 planets it
+loses, Figure 8 (gate-vs-primary Pearson heatmap), and the
+architectural-root-cause note explaining why multi-template routing
+works where single-global-B (V8–V9) did not.
+
 ### V10 — Multi-template gate bank + InvertedGeometryLoss (FIRST GAIN since V5)
 - **Winning config:** 5 parallel fixed-morphology gates, 8-channel CNN
   (5 gates + primary + secondary + odd/even), InvertedGeometryLoss
@@ -188,6 +195,27 @@ Mask:     1 in dip (output < 0), 0 at baseline
   have deeper dips — amplitude dominates correlation. Discrimination
   lives in the *ratio* between gate correlations, which is what the
   Conv1d layer learns.
+- **Per-TCE V6 vs V10 diagnostic** (stored V6 = Config B, not Config C;
+  Config C weights were never saved):
+    - V6 Config B on test set: TP=36 TN=24 FP=14 FN=2 (prec 72.0%,
+      rec 94.7%, F1 0.818).
+    - V10 lambda=0.1: TP=34 TN=31 FP=7 FN=4 (prec 82.9%, rec 89.5%,
+      F1 0.861).
+    - 8 FPs V10 newly catches (V6 prob 0.51–0.64, all flipped below
+      0.50 by V10): K00230, K03785, K00048, K01896, K00225, K01156,
+      K00132, K03064. Mean gate-vs-primary correlation on these 8:
+      G1 +0.37, G2 +0.38, G3 −0.38, G4 −0.08, G5 +0.50. All look
+      planet-shaped by any single template — the discriminator
+      rides the *relative* match across gates.
+    - 2 planets V10 loses that V6 had right: K00013 (V6 0.55, V10
+      0.26), K00912 (V6 0.62, V10 0.42).
+    - 1 new FP V10 introduces: K03650 (V6 0.19, V10 0.83).
+    - Net: +8 FP catches − 2 planet losses − 1 new FP = +5 correct
+      classifications.
+- **Figure 8** (`notebooks/figures/v10_figure_8_gate_heatmap.png`)
+  is the 76×5 Pearson correlation heatmap between each gate
+  template and each TCE's primary_flux, with a V10-probability
+  side panel and class divider.
 - **V10 artefacts:**
   - `src/models/multi_template_gate.py` — MultiTemplateGateBank (5
     gates, internal .clamp(min=0.001) on each amplitude).
@@ -201,10 +229,14 @@ Mask:     1 in dip (output < 0), 0 at baseline
   - `scripts/v10_figures.py` — metrics sweep, amplitude traces,
     learned-template viz, gate-vs-primary correlation heatmap,
     T12/T14 distribution.
-  - `data/v10_training.log`, `data/v10_results.pt`.
+  - `scripts/v10_vs_v6_diagnostic.py` — per-TCE V6 vs V10
+    comparison + Figure 8.
+  - `data/v10_training.log`, `data/v10_results.pt`,
+    `data/v10_vs_v6_diagnostic.csv`.
   - `notebooks/figures/v10_metrics_vs_lambda.png`,
     `v10_amplitude_traces.png`, `v10_learned_templates.png`,
-    `v10_gate_primary_corr.png`, `v10_T12T14_distribution.png`.
+    `v10_gate_primary_corr.png`, `v10_T12T14_distribution.png`,
+    `v10_figure_8_gate_heatmap.png`.
 
 ### V8/V8.5/V9 paper draft: `docs/paper/v9_findings.md`
 Full narrative with unifying root-cause section (Kepler-pipeline Mandel-

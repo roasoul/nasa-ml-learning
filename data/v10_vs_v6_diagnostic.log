@@ -1,0 +1,35 @@
+V6  : TP=36 TN=24 FP=14 FN=2  acc=78.9% prec=72.0% rec=94.7% F1=0.818
+V10 : TP=34 TN=31 FP=7 FN=4  acc=85.5% prec=82.9% rec=89.5% F1=0.861
+
+=== FPs V10 catches that V6 missed  (n=8) ===
+  K00230.01    label=FP    V6 p=0.52->PL  V10 p=0.31->FP  G_corr=[+0.41,+0.41,-0.41,-0.15,+0.48]
+  K03785.01    label=FP    V6 p=0.58->PL  V10 p=0.50->FP  G_corr=[+0.15,+0.15,-0.15,+0.30,+0.28]
+  K00048.01    label=FP    V6 p=0.55->PL  V10 p=0.49->FP  G_corr=[+0.18,+0.18,-0.18,-0.08,+0.25]
+  K01896.01    label=FP    V6 p=0.60->PL  V10 p=0.41->FP  G_corr=[+0.49,+0.51,-0.51,-0.16,+0.66]
+  K00225.01    label=FP    V6 p=0.64->PL  V10 p=0.24->FP  G_corr=[+0.49,+0.50,-0.50,-0.18,+0.67]
+  K01156.01    label=FP    V6 p=0.57->PL  V10 p=0.44->FP  G_corr=[+0.29,+0.29,-0.29,-0.09,+0.42]
+  K00132.01    label=FP    V6 p=0.63->PL  V10 p=0.35->FP  G_corr=[+0.27,+0.29,-0.29,-0.11,+0.38]
+  K03064.01    label=FP    V6 p=0.51->PL  V10 p=0.06->FP  G_corr=[+0.66,+0.68,-0.68,-0.13,+0.86]
+
+=== Planets V10 catches that V6 missed  (n=0) ===
+
+=== Planets V10 misses (total FN = 4) ===
+  K00013.01    label=PLNT  V6 p=0.55->PL  V10 p=0.26->FP  G_corr=[+0.51,+0.52,-0.52,-0.18,+0.69]
+  K00912.01    label=PLNT  V6 p=0.62->PL  V10 p=0.42->FP  G_corr=[+0.08,+0.11,-0.11,-0.01,+0.29]
+  K00254.01    label=PLNT  V6 p=0.23->FP  V10 p=0.23->FP  G_corr=[+0.30,+0.30,-0.30,-0.13,+0.42]
+  K00183.01    label=PLNT  V6 p=0.43->FP  V10 p=0.49->FP  G_corr=[+0.35,+0.36,-0.36,-0.14,+0.50]
+
+=== New FPs V10 introduces (V6 got right, V10 wrong) n=1 ===
+  K03650.01    label=FP    V6 p=0.19->FP  V10 p=0.83->PL  G_corr=[+0.36,+0.37,-0.37,-0.11,+0.44]
+
+Net: V10 gains 8 FP catches and 0 planet catches  |  loses 1 new FPs and has 2 planets V6 had right but V10 lost
+
+Newly-caught FPs — mean gate correlation:
+  G1  mean corr = +0.369  (min +0.151, max +0.663)
+  G2  mean corr = +0.376  (min +0.152, max +0.683)
+  G3  mean corr = -0.376  (min -0.683, max -0.152)
+  G4  mean corr = -0.075  (min -0.182, max +0.305)
+  G5  mean corr = +0.500  (min +0.252, max +0.860)
+
+Saved per-TCE table -> data\v10_vs_v6_diagnostic.csv
+Saved Figure 8 -> notebooks\figures\v10_figure_8_gate_heatmap.png
