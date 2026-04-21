@@ -25,7 +25,8 @@ from src.data.kepler import download_lightcurve, preprocess_lightcurve
 _ARCHIVE_URL = (
     "https://exoplanetarchive.ipac.caltech.edu/cgi-bin/nstedAPI/nph-nstedAPI"
     "?table=cumulative"
-    "&select=kepid,kepoi_name,koi_period,koi_time0bk,koi_depth,koi_disposition"
+    "&select=kepid,kepoi_name,koi_period,koi_time0bk,koi_depth,koi_disposition,"
+    "koi_duration,koi_srad,koi_smass"
     "&where=koi_disposition+like+'{disposition}'"  # caller must URL-encode spaces
     "+and+koi_depth+between+1000+and+50000"
     "+and+koi_period+between+0.5+and+30"
@@ -56,8 +57,21 @@ def fetch_targets(disposition: str) -> list[dict]:
             "period": float(row["koi_period"]),
             "epoch": float(row["koi_time0bk"]),
             "depth_ppm": float(row["koi_depth"]),
+            "duration_hours": _parse_float(row.get("koi_duration"), default=5.0),
+            "stellar_mass": _parse_float(row.get("koi_smass"), default=1.0),
+            "stellar_radius": _parse_float(row.get("koi_srad"), default=1.0),
         })
     return targets
+
+
+def _parse_float(val, default: float) -> float:
+    """Parse an archive CSV cell; fall back to `default` on NaN/empty."""
+    if val is None or val == "" or val.lower() == "nan":
+        return default
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return default
 
 
 def subsample_evenly(targets: list[dict], n: int) -> list[dict]:
@@ -102,6 +116,10 @@ def build_dataset(
     all_labels = []
     all_names = []
     all_depths = []
+    all_durations = []
+    all_periods = []
+    all_stellar_mass = []
+    all_stellar_radius = []
 
     targets = [(t, 1) for t in confirmed] + [(t, 0) for t in fp]
     n_total = len(targets)
@@ -131,6 +149,10 @@ def build_dataset(
             all_labels.append(label)
             all_names.append(name)
             all_depths.append(target["depth_ppm"])
+            all_durations.append(target["duration_hours"])
+            all_periods.append(target["period"])
+            all_stellar_mass.append(target["stellar_mass"])
+            all_stellar_radius.append(target["stellar_radius"])
             n_success += 1
 
             elapsed = time.time() - t0
@@ -166,6 +188,10 @@ def build_dataset(
         "labels": labels,
         "names": all_names,
         "depths_ppm": all_depths,
+        "duration_hours": torch.tensor(all_durations, dtype=torch.float32),
+        "period_days": torch.tensor(all_periods, dtype=torch.float32),
+        "stellar_mass": torch.tensor(all_stellar_mass, dtype=torch.float32),
+        "stellar_radius": torch.tensor(all_stellar_radius, dtype=torch.float32),
         "n_points": n_points,
     }
     torch.save(dataset, output_path)

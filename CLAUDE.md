@@ -5,7 +5,7 @@ This is a personal ML/AI learning project. All code here is independent of my
 employer (MathWorks). I retain full IP ownership of everything in this repo.
 
 **Goal:** Build ML/AI skills targeting a NASA Force AI/ML or Data role.
-**Current phase:** Light Curve Classifier V5 complete → V6 scale-up
+**Current phase:** V7 null result → V8 needs non-archive physics signal
 **Degree:** MS AI Engineering at Quantic (starting June 2025)
 
 ---
@@ -123,6 +123,36 @@ Mask:     1 in dip (output < 0), 0 at baseline
   classification cannot catch them.
   **Fix for V6:** add centroid-offset check, odd/even transit depth comparison,
   or V-shape transit analysis as additional channels.
+
+### V7 Null Result — Archive koi_duration has pipeline bias (CRITICAL)
+- **Soft Kepler loss doesn't help on this dataset.** Lambda sweep in both
+  symmetric and asymmetric modes showed best result at lambda=0. At lambda=0.1
+  the Kepler term is only 2.6% of BCE magnitude (too weak); at lambda=10+
+  the model collapses to "always FP." No useful middle ground found.
+- **Root cause:** 84% of FPs in our dataset (209/250) are flagged as EBs by
+  `koi_fpflag_ss`, BUT their archive `koi_duration` has median obs/pred
+  ratio = 0.999 — nearly identical to confirmed planets (0.957). The Kepler
+  TCE pipeline fits a Mandel-Agol PLANET model to every candidate, which
+  constrains fitted duration to planet-consistent ranges even for EBs. Archive
+  `koi_duration` for EBs is a "best planet fit" — not the true eclipse duration.
+- **Direct trapezoidal fitting doesn't rescue it.** Fit on our 200-bin folded
+  curves succeeded for all 10 tested TCEs (5 planets + 5 EBs), recovered
+  sensible depths and T14. But EB primary eclipses genuinely *look* planet-
+  like when fit as single events, so fitted violations don't separate classes
+  (planet max 0.253, EB min 0.016 — reversed from expectation).
+- **Only signal that worked:** hard Kepler gate at threshold 1.0 on the safe
+  side catches K01091.01 (viol 1.413, 78-hour "transit"). Gives
+  +1.7% precision without blocking any planets. Marginal but free.
+  Available in `scripts/hard_kepler_gate_sweep.py`.
+- **V8 direction:** abandon archive-duration-based physics. Options:
+  (a) Centroid-motion features (requires pixel-level Kepler data, not in archive)
+  (b) Full Mandel-Agol joint fit including limb darkening + stellar density
+  (c) Odd/even-transit DEPTH comparison (not duration) — already in V6
+  (d) Secondary eclipse DEPTH check for deep FP — partial V5 coverage
+- **Artefacts of V7:** `src/models/kepler_loss.py`, `scripts/run_v7.py`,
+  `scripts/sweep_kepler_lambda.py`, `scripts/hard_kepler_gate_sweep.py`,
+  `scripts/trapezoid_fit_feasibility.py`. Kepler physics utilities are
+  sound; they just don't land on this data.
 
 ---
 
@@ -268,12 +298,13 @@ Raw light curve
 ```
 V4  ✅  Taylor gate + 1D CNN (COMPLETE — 100% recall)
 V5  ✅  + Secondary eclipse view (COMPLETE — F1 0.842, +6.2% acc)
-V6  ⬜  + Scale to 500+ TCEs + data augmentation + fix BN pretrain
-V7  ⬜  + Kepler loss function (global physics as SOFT penalty)
-        L_total = L_class + λ·L_Kepler + λ·L_sparsity
-V8  ⬜  Physics Stack Neural Network (PSNN)
-        Taylor Gate (local) → Kepler Gate (global) → CNN
-        Compare PINN (V7) vs PSNN (V8) — does hard gate beat soft?
+V6  ✅  + Scale to 500 TCEs + odd/even channel (COMPLETE — F1 0.815,
+        precision ceiling ~77% on this archive-derived dataset)
+V7  ⚠  Soft Kepler loss — NULL RESULT. Archive koi_duration is biased by
+        pipeline Mandel-Agol fit; doesn't separate EBs from planets.
+V8  ⬜  Needs physics signal that ISN'T archive-derived. Candidates:
+        centroid motion (pixels), odd/even DEPTH (not duration),
+        full joint Mandel-Agol fit with stellar density prior.
 ```
 
 ### V8 PSNN Architecture
