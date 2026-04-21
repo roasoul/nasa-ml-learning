@@ -5,7 +5,10 @@ This is a personal ML/AI learning project. All code here is independent of my
 employer (MathWorks). I retain full IP ownership of everything in this repo.
 
 **Goal:** Build ML/AI skills targeting a NASA Force AI/ML or Data role.
-**Current phase:** V7.5 safe-gate complete → V8 shape-based discrimination
+**Current phase:** V8 + V8.5 trained — null result on F1 (neither beats V6
+Config C). V8.5 shape features separate classes in aggregate (planet vs
+FP AUC_norm ~5x apart) but simple fusion didn't convert that into F1
+gain. Moving to V9 multi-template gate bank next.
 **Degree:** MS AI Engineering at Quantic (starting June 2025)
 
 ---
@@ -123,6 +126,70 @@ Mask:     1 in dip (output < 0), 0 at baseline
   classification cannot catch them.
   **Fix for V6:** add centroid-offset check, odd/even transit depth comparison,
   or V-shape transit analysis as additional channels.
+
+### V8 + V8.5 Null Result — Shape features insufficient as simple fusion
+- **V8** (learnable A, B, t0 Taylor gate, y = min(0, -A·(1 - x²/2 +
+  B·x⁴/24))): acc 77.6%, prec 73.3%, rec 86.8%, F1 0.795, 916 params.
+  Slightly worse than V6 Config C (F1 0.815). A drifted up to 0.026,
+  B drifted down to +0.58, t0 stayed ≈ 0.
+- **V8.5** (V8 + 5 shape-features fused into classifier): acc 76.3%,
+  prec 71.7%, rec 86.8%, F1 0.786, 921 params. Gate's A collapsed
+  to -0.0013 — i.e. the gate channel got zeroed out because the shape
+  features provided an easier path to the BCE minimum. The 5 features
+  are (B_global, AUC_raw, AUC_norm=AUC/A, T12/T14, flat_bottom)
+  extracted per-sample from primary_flux, not from gate_output (see
+  "degenerate gate features" note below).
+- **Degenerate gate features (V8.5 v1 bug, now fixed).** The first pass
+  computed shape features from gate_output. Because every TCE in the
+  dataset is folded to the same fixed phase grid, gate_output is
+  byte-identical across samples — the 5 "per-sample" features were
+  batch-constant. V8.5-v2 extracts features from primary_flux instead,
+  keeping only B as the global prior (constant by design).
+- **Features ARE discriminative in aggregate** (test set n=76):
+    - Planets median AUC_norm 0.07   |   FPs median 0.39 (5.6x)
+    - Planets median flat_bottom 0.010 | FPs median 0.050 (5x)
+    - Planets median T12/T14 0.688    | FPs 0.598 (weak)
+  The simple Linear(16+5, 1) fusion head didn't convert this into an
+  F1 gain. Either a non-linear head or a per-sample gate is needed.
+- **SS-flag validation: NULL** (Figure 7). Per-sample B from closed-
+  form least-squares fit on primary_flux: SS=0 median B=+1.156,
+  SS=1 median B=+1.168, separation gap = 0.012. Primary-eclipse
+  morphology alone cannot recover koi_fpflag_ss — EB primary eclipses
+  genuinely look planet-like when fit as single events (consistent
+  with V7's trapezoid-fit finding that EB primaries are single-event
+  indistinguishable from planets). The SS flag lives in secondary
+  eclipse / centroid data.
+- **Mask-overlap check PASSED** (Figure v8_T12T14_by_SNR). The
+  normalized soft-masks (baseline + ingress + flat_bot = 1 by
+  construction) do not drift to 0.5 at low SNR — high-SNR T12/T14
+  median 0.637, only 16% within [0.40, 0.60]. Design goal met.
+- **V9 direction (priority):** multi-template Taylor-gate bank — N
+  parallel gates each pre-tuned to a specific dip morphology
+  (symmetric U, asymmetric ingress, inverted secondary, box/grazing,
+  Gaussian spot). Per-sample output: which gate fired strongest.
+  This gives per-sample morphological selectivity without needing
+  closed-form fits or per-sample Parameters.
+- **Alternative V9 paths:**
+  (a) Wire `DynamicGeometryLoss` (saved in src/models/geometry_loss.py)
+      with per-sample B from the closed-form fit as training signal.
+  (b) Non-linear classifier head (MLP) so the per-sample feature
+      non-linearities get modeled.
+  (c) Multi-head attention over the 4 CNN channels + 5 shape
+      features — lets the model route per-sample.
+- **V8/V8.5 artefacts:**
+  - src/models/taylor_layer_v8.py — TaylorGateLayerV8 + custom
+    TaylorGateV8Function with hand-coded backward, all three gradients
+    (A, B, t0) verified by torch.autograd.gradcheck in double precision.
+  - src/models/taylor_cnn_v8.py — TaylorCNNv8, shape-feature fusion.
+  - src/models/taylor_cnn_v8.pt, taylor_cnn_v85.pt — trained weights.
+  - src/models/geometry_loss.py — DynamicGeometryLoss (unused, for V9).
+  - scripts/run_v8.py, scripts/gradcheck_v8.py, scripts/v8_figures.py,
+    scripts/v8_ss_validation.py.
+  - data/ss_flag_cache.csv — cached NASA Archive koi_fpflag_ss +
+    koi_model_snr for all 9564 KOIs.
+  - notebooks/figures/v8_B_histogram.png, v8_AUCnorm_histogram.png,
+    v8_B_vs_AUCnorm.png, v8_K03745_gate.png, B_vs_SS_flag.png,
+    v8_T12T14_by_SNR.png.
 
 ### V7 Null Result — Archive koi_duration has pipeline bias (CRITICAL)
 - **Soft Kepler loss doesn't help on this dataset.** Lambda sweep in both
@@ -285,6 +352,7 @@ Raw light curve
 - [x] Taylor-CNN V6 — 500 TCEs + odd/even channel, F1 0.815 ✅
 - [x] V7 Kepler soft loss — null result, diagnosed + documented ✅
 - [x] V7.5 safe Kepler gate — +1.7% precision, zero planet risk ✅
+- [x] V8 + V8.5 shape discrimination — null result, F1 0.795/0.786 ⚠
 - [ ] 3Blue1Brown — Neural Networks video 4
 - [ ] 3Blue1Brown — Transformers (chapters 5-7)
 - [ ] Vizuara — Foundations for ML
@@ -323,10 +391,21 @@ V7   ⚠   Soft Kepler loss — NULL RESULT. Archive koi_duration biased by
 V7.5 ✅  Safe hard Kepler gate at thr=1.0 — precision 75.0% → 76.7%,
          zero planet risk. Catches K01091.01 (78h "transit", viol=1.413).
          (src/models/taylor_cnn_v75.pt)
-V8   ⬜  Shape-based discrimination: V-shape (EB grazing) vs U-shape
-         (planet) via Taylor gate morphological parameters. Use
-         ingress/egress-to-flat-bottom ratio as EB discriminator.
-         Alternative: full Mandel-Agol joint fit + stellar density.
+V8   ⚠  Learnable shape parameter B added to Taylor gate
+         (y = min(0, -A·(1 - x²/2 + B·x⁴/24))), plus learnable
+         phase offset t0. Gradcheck PASS on all three gradients.
+         F1 0.795 — slightly below V6 Config C. B drifted to +0.58
+         (intermediate between U and V), acknowledging a mixed
+         population. (src/models/taylor_cnn_v8.pt)
+V8.5 ⚠  V8 + 5-feature shape fusion (B, AUC_raw, AUC/A, T12/T14,
+         flat_bottom) extracted per-sample from primary_flux on a
+         fixed [-1, 1] phase grid with normalized soft masks.
+         F1 0.786. Features discriminate classes in aggregate
+         (AUC_norm 5x separation) but the linear classifier head
+         didn't capture it; gate's A collapsed to zero.
+         SS-flag validation: per-sample B does NOT recover
+         koi_fpflag_ss (separation gap 0.012) — primary-eclipse
+         shape alone is insufficient. (src/models/taylor_cnn_v85.pt)
 ```
 
 ### V8 PSNN Architecture
@@ -379,11 +458,15 @@ Replaces ExoMiner's 6 input views with 1 input + N physics gates
 
 ### Full version roadmap
 ```
-V4  ✅  Single Taylor gate (COMPLETE — 100% recall, 798 params)
-V5  ✅  + Secondary eclipse view (COMPLETE — F1 0.842, 856 params)
-V6  ⬜  + 500+ TCEs + augmentation + BN pretrain fix
-V7  ⬜  + Kepler LOSS (soft penalty)
-V8  ⬜  + Kepler GATE (hard gate) = PSNN
-V9  ⬜  + Multi-template gate bank (N parallel Taylor gates)
-        Compare V4→V9 ablation study = the paper
+V4   ✅  Single Taylor gate (COMPLETE — 100% recall, 798 params)
+V5   ✅  + Secondary eclipse view (COMPLETE — F1 0.842, 856 params)
+V6   ✅  + 500 TCEs + odd/even channel (COMPLETE — F1 0.815)
+V7   ⚠   Soft Kepler loss — NULL RESULT
+V7.5 ✅  Safe hard Kepler gate at thr=1.0 — zero planet risk
+V8   ⚠   Learnable B curvature + t0 offset — F1 0.795, gradcheck PASS
+V8.5 ⚠   V8 + 5 shape features (primary_flux, normalized masks) — F1 0.786
+V9   ⬜  Next: multi-template Taylor-gate bank (N parallel gates),
+         each tuned to a distinct dip morphology. Per-sample gate
+         selection replaces the single-B-population-average problem.
+         Compare V4→V9 ablation study = the paper
 ```
