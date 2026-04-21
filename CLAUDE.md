@@ -5,10 +5,11 @@ This is a personal ML/AI learning project. All code here is independent of my
 employer (MathWorks). I retain full IP ownership of everything in this repo.
 
 **Goal:** Build ML/AI skills targeting a NASA Force AI/ML or Data role.
-**Current phase:** V8 + V8.5 trained — null result on F1 (neither beats V6
-Config C). V8.5 shape features separate classes in aggregate (planet vs
-FP AUC_norm ~5x apart) but simple fusion didn't convert that into F1
-gain. Moving to V9 multi-template gate bank next.
+**Current phase:** V8 + V8.5 + V9 all null results. Shape features
+separate classes in aggregate (5x AUC_norm separation) but neither
+fusion (V8.5) nor penalty (V9) converts that into F1 gain. Moving
+to V10 multi-template gate bank — per-sample morphology via N
+parallel gates rather than a single global B.
 **Degree:** MS AI Engineering at Quantic (starting June 2025)
 
 ---
@@ -126,6 +127,57 @@ Mask:     1 in dip (output < 0), 0 at baseline
   classification cannot catch them.
   **Fix for V6:** add centroid-offset check, odd/even transit depth comparison,
   or V-shape transit analysis as additional channels.
+
+### V9 Null Result — DynamicGeometryLoss hurts because penalty is inverted for this data
+- **Sweep:** lambda_max ∈ {0.1, 0.5, 1.0}. BCE + 0.01·|B| +
+  DynamicGeometryLoss (SNR pivot 12.0). 4-channel CNN unchanged
+  from V6; shape features only in the loss, not the input.
+  A clamped post-step to min=0.001 so the gate can't die.
+- **Results (seed=42 76-TCE test set):**
+    | lambda_max | Acc   | Prec  | Rec   | F1    | A      |
+    | 0.1        | 73.7% | 69.6% | 84.2% | 0.762 | 0.0010 |
+    | 0.5        | 75.0% | 72.1% | 81.6% | 0.765 | 0.0010 |
+    | 1.0        | 50.0% |  0.0% |  0.0% | 0.000 | 0.0085 |
+  All three worse than V6 Config C (F1 0.815, prec 76.7%).
+  lambda=1.0 catastrophic — geometry term overwhelms BCE and the
+  classifier predicts "not-planet" for everything.
+- **Gate collapse despite clamp.** A hit the 0.001 floor within ~25
+  epochs for lambda ≤ 0.5. The clamp kept the gate "alive" in name
+  but gate_out ≈ 0 in practice.
+- **Why the geometry loss hurts this dataset:** the penalty encodes
+  "U-shape planet / V-shape EB" → `prob · t12_t14` punishes high
+  ingress fraction. But on this data the direction is reversed:
+    - Planets  T12/T14 median 0.673  |  FPs  0.604
+    - Planets  AUC_norm 0.090        |  FPs  0.506
+  Planets have *higher* T12/T14 (more ingress-like) and *lower*
+  AUC_norm because real planet dips are narrow relative to the full
+  phase. Normalized soft masks working on `depth_norm = depth/A`
+  route deep FP eclipses into the flat_bot bucket (depth_norm > 0.8),
+  leaving planets with a relatively larger ingress fraction. The
+  penalty direction hard-coded into DynamicGeometryLoss is therefore
+  anti-aligned with the class-separation direction — pushing planets
+  down and pulling EBs up.
+- **Fixing the sign would likely help** (use `prob·(1-t12_t14)` and
+  `prob·auc_norm` instead), but that's a new experiment — and the
+  broader lesson is that a single global B cannot encode a per-sample
+  morphology signal. The next step is structural, not loss-tuning.
+- **SS-flag v2 (scipy curve_fit, bounded):** Per-sample B fit on
+  dip-only samples with bounds B ∈ [−2, 2], A ∈ [0, 0.1]. Result:
+    - SS=0 (not EB): n=285, median B = +1.212
+    - SS=1 (EB flag): n=215, median B = +1.177
+    - Separation gap = 0.034 → NULL
+  Matches V8's closed-form fit (0.012 gap). Primary-eclipse shape
+  alone cannot recover the SS flag regardless of fit method.
+- **V9 artefacts:**
+  - src/models/taylor_cnn_v9.py — TaylorCNNv9, shape features in
+    loss only; `compute_shape_features(primary_flux)` method.
+  - src/models/taylor_cnn_v9.pt — winning lambda (0.5) weights.
+  - scripts/run_v9.py, scripts/v9_figures.py,
+    scripts/v9_ss_validation.py.
+  - data/v9_training.log, data/v9_results.pt.
+  - notebooks/figures/v9_metrics_vs_lambda.png,
+    v9_A_trace.png, v9_T12T14_distribution.png,
+    B_vs_SS_flag_v2.png.
 
 ### V8 + V8.5 Null Result — Shape features insufficient as simple fusion
 - **V8** (learnable A, B, t0 Taylor gate, y = min(0, -A·(1 - x²/2 +
@@ -353,6 +405,7 @@ Raw light curve
 - [x] V7 Kepler soft loss — null result, diagnosed + documented ✅
 - [x] V7.5 safe Kepler gate — +1.7% precision, zero planet risk ✅
 - [x] V8 + V8.5 shape discrimination — null result, F1 0.795/0.786 ⚠
+- [x] V9 DynamicGeometryLoss — null result, best F1 0.765 at λ=0.5 ⚠
 - [ ] 3Blue1Brown — Neural Networks video 4
 - [ ] 3Blue1Brown — Transformers (chapters 5-7)
 - [ ] Vizuara — Foundations for ML
@@ -406,6 +459,14 @@ V8.5 ⚠  V8 + 5-feature shape fusion (B, AUC_raw, AUC/A, T12/T14,
          SS-flag validation: per-sample B does NOT recover
          koi_fpflag_ss (separation gap 0.012) — primary-eclipse
          shape alone is insufficient. (src/models/taylor_cnn_v85.pt)
+V9   ⚠  Shape features moved from CNN input into the loss via
+         DynamicGeometryLoss (SNR-weighted, pivot 12). Same 4-
+         channel CNN as V6. A post-step clamped to min=0.001.
+         Lambda sweep: best F1 0.765 at lambda=0.5 (worse than V6).
+         Penalty direction anti-aligned with class-separation on
+         this data (planet T12/T14 > FP T12/T14). Confirms that
+         a single global B cannot encode per-sample morphology.
+         (src/models/taylor_cnn_v9.pt)
 ```
 
 ### V8 PSNN Architecture
@@ -465,8 +526,10 @@ V7   ⚠   Soft Kepler loss — NULL RESULT
 V7.5 ✅  Safe hard Kepler gate at thr=1.0 — zero planet risk
 V8   ⚠   Learnable B curvature + t0 offset — F1 0.795, gradcheck PASS
 V8.5 ⚠   V8 + 5 shape features (primary_flux, normalized masks) — F1 0.786
-V9   ⬜  Next: multi-template Taylor-gate bank (N parallel gates),
+V9   ⚠   DynamicGeometryLoss (SNR-weighted shape + AUC penalty) —
+         NULL RESULT, best F1 0.765 at lambda=0.5
+V10  ⬜  Next: multi-template Taylor-gate bank (N parallel gates),
          each tuned to a distinct dip morphology. Per-sample gate
          selection replaces the single-B-population-average problem.
-         Compare V4→V9 ablation study = the paper
+         Compare V4→V10 ablation study = the paper
 ```
