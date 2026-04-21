@@ -1,0 +1,53 @@
+Dataset: 500 TCEs (250 confirmed, 250 FP)
+Fetching FP flags from archive...
+
+FP breakdown by flag:
+  Stellar eclipse (EB):           209
+  Centroid offset (background):   94
+  Not transit-like:               23
+  Ephemeris match contamination:  52
+  FPs WITHOUT EB flag:            41
+  FPs with multiple flags are counted in each row.
+
+Duration ratio obs/pred (p5, p25, p50, p75, p95):
+  Confirmed planets              n=250  p5=0.542  p25=0.809  p50=0.957  p75=1.089  p95=1.346
+  FP — all                       n=250  p5=0.208  p25=0.687  p50=1.018  p75=1.648  p95=4.522
+  FP — stellar eclipse           n=209  p5=0.205  p25=0.611  p50=0.999  p75=1.576  p95=3.533
+  FP — NOT stellar eclip         n=41   p5=0.475  p25=0.909  p50=1.187  p75=3.542  p95=8.344
+  FP — centroid offset           n=94   p5=0.245  p25=0.900  p50=1.312  p75=2.622  p95=6.537
+  FP — not transit-like          n=23   p5=0.477  p25=1.052  p50=3.298  p75=5.354  p95=8.703
+
+Log ratio log(obs/pred):
+  Confirmed planets              n=250  p5=-0.613  p25=-0.212  p50=-0.044  p75=0.086  p95=0.297
+  FP — stellar eclipse           n=209  p5=-1.585  p25=-0.493  p50=-0.001  p75=0.455  p95=1.262
+  FP — NOT stellar eclip         n=41   p5=-0.744  p25=-0.096  p50=0.171  p75=1.265  p95=2.122
+
+First 5 EB-flagged FPs — do their durations look too long?
+  KOI          period_d  obs_h   pred_h  ratio  M      R     
+  K07284.01    1.702     3.03    2.66    1.139  1.09   1.26  
+  K06712.01    16.487    7.07    9.22    0.767  1.16   2.10  
+  K01541.01    2.379     3.17    2.63    1.207  1.23   1.16  
+  K00619.01    2.879     2.63    2.31    1.139  0.98   0.88  
+  K01011.01    6.198     7.54    3.01    2.501  0.98   0.90  
+
+Known-planet sanity check (Kepler-5b through Kepler-12b):
+  name        P      archive_dur   pred_dur   ratio 
+  Kepler-6b   3.23   3.59          3.41       1.053 
+  Kepler-7b   4.89   5.16          5.48       0.942 
+  Kepler-12b  4.44   4.70          4.10       1.146 
+
+--- Interpretation ---
+  Confirmed planets ratio median: 0.957
+  EB FPs ratio median:            0.999
+  Non-EB FPs ratio median:        1.187
+Traceback (most recent call last):
+  File "C:\Users\skapa\Projects\ml-learning\nasa-ml-learning\scripts\investigate_duration_mystery.py", line 199, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\skapa\Projects\ml-learning\nasa-ml-learning\scripts\investigate_duration_mystery.py", line 191, in main
+    print("  \u2192 EB FPs look duration-similar to planets.")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\skapa\miniconda3\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2192' in position 2: character maps to <undefined>

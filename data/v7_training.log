@@ -1,0 +1,69 @@
+C:\Users\skapa\Projects\ml-learning\nasa-ml-learning\scripts\run_v7.py:129: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\torch\csrc\autograd\generated\python_variable_methods.cpp:839.)
+  ep_bce += float(l_bce) * len(idx)
+Device: cuda
+Train: 350  Val: 74  Test: 76
+Train violation medians: confirmed 0.166  FP 0.510
+
+=== V6 Config C (BCE only, no physics loss) ===
+  params: 914
+    ep  25  bce=0.5551  val_bce=0.5475  wait=2
+    ep  50  bce=0.5336  val_bce=0.5143  wait=0
+    ep  75  bce=0.5155  val_bce=0.5035  wait=5
+    ep 100  bce=0.5005  val_bce=0.4791  wait=3
+    ep 125  bce=0.4903  val_bce=0.4657  wait=0
+    ep 150  bce=0.4673  val_bce=0.4635  wait=5
+    ep 175  bce=0.4703  val_bce=0.4451  wait=10
+    ep 200  bce=0.4550  val_bce=0.4426  wait=3
+
+=== V7 (BCE + Kepler + Sparsity) ===
+  params: 914
+    ep  25  bce=0.5543  val_bce=0.5456  wait=2  kep=0.1644  sp=0.2411
+    ep  50  bce=0.5341  val_bce=0.5136  wait=0  kep=0.1532  sp=0.2834
+    ep  75  bce=0.5151  val_bce=0.4959  wait=5  kep=0.1487  sp=0.3249
+    ep 100  bce=0.4957  val_bce=0.4746  wait=1  kep=0.1384  sp=0.3589
+    ep 125  bce=0.4855  val_bce=0.4605  wait=3  kep=0.1359  sp=0.3864
+    ep 150  bce=0.4649  val_bce=0.4515  wait=5  kep=0.1208  sp=0.4143
+    ep 175  bce=0.4677  val_bce=0.4385  wait=1  kep=0.1246  sp=0.4358
+    ep 200  bce=0.4531  val_bce=0.4348  wait=7  kep=0.1202  sp=0.4543
+
+========================================================================
+Comparison at threshold 0.50 and 0.40
+========================================================================
+  V6 Config C, BCE only                    thr=0.50  acc=80.3%  prec=76.7%  rec=86.8%  F1=0.815  TP=33/FP=10/TN=28/FN=5
+  V6 Config C, BCE only                    thr=0.40  acc=77.6%  prec=71.4%  rec=92.1%  F1=0.805  TP=35/FP=14/TN=24/FN=3
+  V7 BCE + Kepler + Sparsity               thr=0.50  acc=76.3%  prec=71.7%  rec=86.8%  F1=0.786  TP=33/FP=13/TN=25/FN=5
+  V7 BCE + Kepler + Sparsity               thr=0.40  acc=77.6%  prec=71.4%  rec=92.1%  F1=0.805  TP=35/FP=14/TN=24/FN=3
+
+Success criterion (prec > 80% AND recall = 100%):
+  V6 @ 0.50      FAIL
+  V6 @ 0.40      FAIL
+  V7 @ 0.50      FAIL
+  V7 @ 0.40      FAIL
+
+V7 surviving FPs / missed planets at threshold 0.50 (listing only mistakes):
+  KOI          true     prob   viol    period  dur_h   M_star 
+  K01456.01    PLANET   0.35  0.221     7.89    5.21   0.95
+  K00013.01    PLANET   0.40  0.440     1.76    3.17   2.47
+  K00912.01    PLANET   0.43  0.068    10.85    3.00   0.61
+  K00254.01    PLANET   0.23  0.039     2.46    1.73   0.59
+  K00941.01    PLANET   0.48  0.116     6.58    3.09   0.87
+  K07022.01    FP       0.61  0.132    10.06    3.60   0.67
+  K06464.01    FP       0.60  0.001    20.00    5.00   1.09
+  K03785.01    FP       0.69  0.294     6.28    7.94   1.71
+  K00741.01    FP       0.60  0.013    23.36    4.61   1.02
+  K01091.01    FP       0.83  1.413    15.24   19.29   1.13
+  K03615.01    FP       0.54  0.036     4.66    3.77   0.84
+  K00983.02    FP       0.74  0.659     5.18    2.48   1.63
+  K00048.01    FP       0.62  0.495    23.84    6.03   1.08
+  K05189.01    FP       0.68  0.396     3.59    3.42   0.73
+  K00402.01    FP       0.58  0.538    17.18    7.67   1.05
+  K01156.01    FP       0.51  0.282     1.87    1.53   0.76
+  K01484.01    FP       0.66  0.006     3.47    2.29   0.73
+  K00132.01    FP       0.57  0.109    10.81    4.46   1.11
+
+Case study — K00254.01 (stuck planet in V6 Config C):
+  V6 prob: 0.137
+  V7 prob: 0.229  (Kepler violation 0.039, well under tolerance)
+
+Saved V7 model to src/models/taylor_cnn_v7.pt

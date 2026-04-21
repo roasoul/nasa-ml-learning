@@ -1,0 +1,166 @@
+Device: cuda
+Train: 350  Val: 74  Test: 76
+
+Retraining V6 Config C (from-scratch, BCE only)...
+  Done. Best val loss = 0.4365
+
+Baseline (no gate, thr=0.50):  acc=78.9%  prec=75.0%  rec=86.8%  F1=0.805  TP=33 FP=11 TN=27 FN=5
+
+Confirmed-planet violation distribution (test set):
+  min=0.003  p50=0.116  p95=0.531  max=0.870
+
+========================================================================
+Hard Kepler gate sweep — filter if violation > threshold
+========================================================================
+  thr     acc    prec     rec      F1  TP  FP  TN  FN  filtered  true_pl_blocked
+----------------------------------------------------------------------------------------
+  0.3   77.6%  81.8%  71.1%  0.761   27   6  32  11        25                6
+  0.4   77.6%  80.0%  73.7%  0.767   28   7  31  10        23                5
+  0.5   77.6%  78.4%  76.3%  0.773   29   8  30   9        19                4
+  0.6   81.6%  80.0%  84.2%  0.821   32   8  30   6        13                1
+  0.8   78.9%  76.2%  84.2%  0.800   32  10  28   6         9                1
+  1.0   80.3%  76.7%  86.8%  0.815   33  10  28   5         8                0
+
+KOIs filtered at each threshold (cumulative from strictest):
+
+  thr=0.3  (filtered 25):
+    KOI          true     viol    cnn_prob  gate_effect    
+    K00013.01    PLANET   0.440   0.35      no-op (CNN already missed)
+    K00214.01    PLANET   0.587   0.65      WRONG (blocks planet)
+    K00875.01    PLANET   0.507   0.62      WRONG (blocks planet)
+    K00942.01    PLANET   0.521   0.85      WRONG (blocks planet)
+    K01627.01    PLANET   0.870   0.78      WRONG (blocks planet)
+    K00137.02    PLANET   0.332   0.73      WRONG (blocks planet)
+    K00200.01    PLANET   0.488   0.60      WRONG (blocks planet)
+    K04560.01    FP       0.684   0.22      no-op (already not planet)
+    K01183.01    FP       0.561   0.34      no-op (already not planet)
+    K03866.01    FP       2.339   0.06      no-op (already not planet)
+    K01091.01    FP       1.413   0.89      correct (rejects FP)
+    K01795.01    FP       0.556   0.03      no-op (already not planet)
+    K03898.01    FP       1.476   0.01      no-op (already not planet)
+    K07343.01    FP       0.463   0.00      no-op (already not planet)
+    K03962.01    FP       1.265   0.02      no-op (already not planet)
+    K07403.01    FP       0.759   0.11      no-op (already not planet)
+    K00983.02    FP       0.659   0.74      correct (rejects FP)
+    K00048.01    FP       0.495   0.55      correct (rejects FP)
+    K03879.01    FP       1.245   0.03      no-op (already not planet)
+    K05189.01    FP       0.396   0.66      correct (rejects FP)
+    K01155.01    FP       1.554   0.04      no-op (already not planet)
+    K01896.01    FP       0.793   0.51      correct (rejects FP)
+    K00402.01    FP       0.538   0.43      no-op (already not planet)
+    K07717.01    FP       1.438   0.05      no-op (already not planet)
+    K03064.01    FP       1.193   0.21      no-op (already not planet)
+
+  thr=0.4  (filtered 23):
+    KOI          true     viol    cnn_prob  gate_effect    
+    K00013.01    PLANET   0.440   0.35      no-op (CNN already missed)
+    K00214.01    PLANET   0.587   0.65      WRONG (blocks planet)
+    K00875.01    PLANET   0.507   0.62      WRONG (blocks planet)
+    K00942.01    PLANET   0.521   0.85      WRONG (blocks planet)
+    K01627.01    PLANET   0.870   0.78      WRONG (blocks planet)
+    K00200.01    PLANET   0.488   0.60      WRONG (blocks planet)
+    K04560.01    FP       0.684   0.22      no-op (already not planet)
+    K01183.01    FP       0.561   0.34      no-op (already not planet)
+    K03866.01    FP       2.339   0.06      no-op (already not planet)
+    K01091.01    FP       1.413   0.89      correct (rejects FP)
+    K01795.01    FP       0.556   0.03      no-op (already not planet)
+    K03898.01    FP       1.476   0.01      no-op (already not planet)
+    K07343.01    FP       0.463   0.00      no-op (already not planet)
+    K03962.01    FP       1.265   0.02      no-op (already not planet)
+    K07403.01    FP       0.759   0.11      no-op (already not planet)
+    K00983.02    FP       0.659   0.74      correct (rejects FP)
+    K00048.01    FP       0.495   0.55      correct (rejects FP)
+    K03879.01    FP       1.245   0.03      no-op (already not planet)
+    K01155.01    FP       1.554   0.04      no-op (already not planet)
+    K01896.01    FP       0.793   0.51      correct (rejects FP)
+    K00402.01    FP       0.538   0.43      no-op (already not planet)
+    K07717.01    FP       1.438   0.05      no-op (already not planet)
+    K03064.01    FP       1.193   0.21      no-op (already not planet)
+
+  thr=0.5  (filtered 19):
+    KOI          true     viol    cnn_prob  gate_effect    
+    K00214.01    PLANET   0.587   0.65      WRONG (blocks planet)
+    K00875.01    PLANET   0.507   0.62      WRONG (blocks planet)
+    K00942.01    PLANET   0.521   0.85      WRONG (blocks planet)
+    K01627.01    PLANET   0.870   0.78      WRONG (blocks planet)
+    K04560.01    FP       0.684   0.22      no-op (already not planet)
+    K01183.01    FP       0.561   0.34      no-op (already not planet)
+    K03866.01    FP       2.339   0.06      no-op (already not planet)
+    K01091.01    FP       1.413   0.89      correct (rejects FP)
+    K01795.01    FP       0.556   0.03      no-op (already not planet)
+    K03898.01    FP       1.476   0.01      no-op (already not planet)
+    K03962.01    FP       1.265   0.02      no-op (already not planet)
+    K07403.01    FP       0.759   0.11      no-op (already not planet)
+    K00983.02    FP       0.659   0.74      correct (rejects FP)
+    K03879.01    FP       1.245   0.03      no-op (already not planet)
+    K01155.01    FP       1.554   0.04      no-op (already not planet)
+    K01896.01    FP       0.793   0.51      correct (rejects FP)
+    K00402.01    FP       0.538   0.43      no-op (already not planet)
+    K07717.01    FP       1.438   0.05      no-op (already not planet)
+    K03064.01    FP       1.193   0.21      no-op (already not planet)
+
+  thr=0.6  (filtered 13):
+    KOI          true     viol    cnn_prob  gate_effect    
+    K01627.01    PLANET   0.870   0.78      WRONG (blocks planet)
+    K04560.01    FP       0.684   0.22      no-op (already not planet)
+    K03866.01    FP       2.339   0.06      no-op (already not planet)
+    K01091.01    FP       1.413   0.89      correct (rejects FP)
+    K03898.01    FP       1.476   0.01      no-op (already not planet)
+    K03962.01    FP       1.265   0.02      no-op (already not planet)
+    K07403.01    FP       0.759   0.11      no-op (already not planet)
+    K00983.02    FP       0.659   0.74      correct (rejects FP)
+    K03879.01    FP       1.245   0.03      no-op (already not planet)
+    K01155.01    FP       1.554   0.04      no-op (already not planet)
+    K01896.01    FP       0.793   0.51      correct (rejects FP)
+    K07717.01    FP       1.438   0.05      no-op (already not planet)
+    K03064.01    FP       1.193   0.21      no-op (already not planet)
+
+  thr=0.8  (filtered 9):
+    KOI          true     viol    cnn_prob  gate_effect    
+    K01627.01    PLANET   0.870   0.78      WRONG (blocks planet)
+    K03866.01    FP       2.339   0.06      no-op (already not planet)
+    K01091.01    FP       1.413   0.89      correct (rejects FP)
+    K03898.01    FP       1.476   0.01      no-op (already not planet)
+    K03962.01    FP       1.265   0.02      no-op (already not planet)
+    K03879.01    FP       1.245   0.03      no-op (already not planet)
+    K01155.01    FP       1.554   0.04      no-op (already not planet)
+    K07717.01    FP       1.438   0.05      no-op (already not planet)
+    K03064.01    FP       1.193   0.21      no-op (already not planet)
+
+  thr=1.0  (filtered 8):
+    KOI          true     viol    cnn_prob  gate_effect    
+    K03866.01    FP       2.339   0.06      no-op (already not planet)
+    K01091.01    FP       1.413   0.89      correct (rejects FP)
+    K03898.01    FP       1.476   0.01      no-op (already not planet)
+    K03962.01    FP       1.265   0.02      no-op (already not planet)
+    K03879.01    FP       1.245   0.03      no-op (already not planet)
+    K01155.01    FP       1.554   0.04      no-op (already not planet)
+    K07717.01    FP       1.438   0.05      no-op (already not planet)
+    K03064.01    FP       1.193   0.21      no-op (already not planet)
+
+Safety check — any CONFIRMED planet with violation above threshold?
+  thr=0.3: YES — these planets would be blocked:
+    K00013.01 viol=0.440
+    K00214.01 viol=0.587
+    K00875.01 viol=0.507
+    K00942.01 viol=0.521
+    K01627.01 viol=0.870
+    K00137.02 viol=0.332
+    K00200.01 viol=0.488
+  thr=0.4: YES — these planets would be blocked:
+    K00013.01 viol=0.440
+    K00214.01 viol=0.587
+    K00875.01 viol=0.507
+    K00942.01 viol=0.521
+    K01627.01 viol=0.870
+    K00200.01 viol=0.488
+  thr=0.5: YES — these planets would be blocked:
+    K00214.01 viol=0.587
+    K00875.01 viol=0.507
+    K00942.01 viol=0.521
+    K01627.01 viol=0.870
+  thr=0.6: YES — these planets would be blocked:
+    K01627.01 viol=0.870
+  thr=0.8: YES — these planets would be blocked:
+    K01627.01 viol=0.870
+  thr=1.0: safe (no planet above threshold)

@@ -5,7 +5,7 @@ This is a personal ML/AI learning project. All code here is independent of my
 employer (MathWorks). I retain full IP ownership of everything in this repo.
 
 **Goal:** Build ML/AI skills targeting a NASA Force AI/ML or Data role.
-**Current phase:** V7 null result → V8 needs non-archive physics signal
+**Current phase:** V7.5 safe-gate complete → V8 shape-based discrimination
 **Degree:** MS AI Engineering at Quantic (starting June 2025)
 
 ---
@@ -144,15 +144,31 @@ Mask:     1 in dip (output < 0), 0 at baseline
   side catches K01091.01 (viol 1.413, 78-hour "transit"). Gives
   +1.7% precision without blocking any planets. Marginal but free.
   Available in `scripts/hard_kepler_gate_sweep.py`.
-- **V8 direction:** abandon archive-duration-based physics. Options:
-  (a) Centroid-motion features (requires pixel-level Kepler data, not in archive)
-  (b) Full Mandel-Agol joint fit including limb darkening + stellar density
-  (c) Odd/even-transit DEPTH comparison (not duration) — already in V6
-  (d) Secondary eclipse DEPTH check for deep FP — partial V5 coverage
-- **Artefacts of V7:** `src/models/kepler_loss.py`, `scripts/run_v7.py`,
-  `scripts/sweep_kepler_lambda.py`, `scripts/hard_kepler_gate_sweep.py`,
-  `scripts/trapezoid_fit_feasibility.py`. Kepler physics utilities are
-  sound; they just don't land on this data.
+- **V8 direction — shape-based discrimination (priority path):**
+  Taylor gate morphological parameters can distinguish V-shape (grazing
+  EBs) from U-shape (real planet transits with flat bottoms):
+  - V-shape: short/zero flat-bottom duration T23, long ingress T12.
+    Ratio T12 / T14 close to 0.5. EB signature.
+  - U-shape: long flat-bottom T23, short T12. Ratio T12 / T14 < 0.25.
+    Planet signature.
+  Implementation: extend the Taylor gate to learn T12 and T14 as
+  separate parameters, feed the ratio as an explicit feature to the
+  classifier head. Already have trapezoid-fit tooling from V7 in
+  `scripts/trapezoid_fit_feasibility.py` to bootstrap ground-truth
+  ratios for the training set.
+- **Alternative V8 paths if shape-based falls short:**
+  (a) Full Mandel-Agol joint fit with stellar density prior
+  (b) Centroid-motion features (pixel-level, needs MAST target-pixel files)
+  (c) Stronger weight on V6's existing odd/even-DEPTH channel
+- **V7.5 safe gate (implemented):** `src/models/taylor_cnn_v75.pt`
+  bundles V6 Config C weights with `kepler_gate_threshold = 1.0`. At
+  inference: if violation > 1.0, override prediction to FP. +1.7%
+  precision, zero planets blocked. See `docs/paper/v7_findings.md`.
+- **Artefacts of V7/V7.5:** `src/models/kepler_loss.py`,
+  `scripts/run_v7.py`, `scripts/sweep_kepler_lambda.py`,
+  `scripts/hard_kepler_gate_sweep.py`, `scripts/trapezoid_fit_feasibility.py`,
+  `scripts/build_v75_and_figures.py`, `notebooks/figures/*.png`.
+  Kepler physics utilities are sound; they just don't land on this data.
 
 ---
 
@@ -266,11 +282,14 @@ Raw light curve
 - [x] 3Blue1Brown — Neural Networks videos 1-3
 - [x] Taylor-CNN PINN V4 — 100% recall on real Kepler data ✅
 - [x] Taylor-CNN PINN V5 — secondary eclipse view, F1 0.842 ✅
+- [x] Taylor-CNN V6 — 500 TCEs + odd/even channel, F1 0.815 ✅
+- [x] V7 Kepler soft loss — null result, diagnosed + documented ✅
+- [x] V7.5 safe Kepler gate — +1.7% precision, zero planet risk ✅
 - [ ] 3Blue1Brown — Neural Networks video 4
 - [ ] 3Blue1Brown — Transformers (chapters 5-7)
 - [ ] Vizuara — Foundations for ML
 - [ ] VanderPlas — Astronomy ML book
-- [ ] Light Curve Classifier V6 (scale to 500+ TCEs)
+- [ ] Light Curve Classifier V8 (shape-based discrimination)
 - [ ] Quantic MS AI Engineering (June 2025)
 
 ---
@@ -296,15 +315,18 @@ Raw light curve
 ## Version Roadmap
 
 ```
-V4  ✅  Taylor gate + 1D CNN (COMPLETE — 100% recall)
-V5  ✅  + Secondary eclipse view (COMPLETE — F1 0.842, +6.2% acc)
-V6  ✅  + Scale to 500 TCEs + odd/even channel (COMPLETE — F1 0.815,
-        precision ceiling ~77% on this archive-derived dataset)
-V7  ⚠  Soft Kepler loss — NULL RESULT. Archive koi_duration is biased by
-        pipeline Mandel-Agol fit; doesn't separate EBs from planets.
-V8  ⬜  Needs physics signal that ISN'T archive-derived. Candidates:
-        centroid motion (pixels), odd/even DEPTH (not duration),
-        full joint Mandel-Agol fit with stellar density prior.
+V4   ✅  Taylor gate + 1D CNN (COMPLETE — 100% recall)
+V5   ✅  + Secondary eclipse view (COMPLETE — F1 0.842, +6.2% acc)
+V6   ✅  + Scale to 500 TCEs + odd/even channel (COMPLETE — F1 0.815)
+V7   ⚠   Soft Kepler loss — NULL RESULT. Archive koi_duration biased by
+         pipeline Mandel-Agol fit (see docs/paper/v7_findings.md)
+V7.5 ✅  Safe hard Kepler gate at thr=1.0 — precision 75.0% → 76.7%,
+         zero planet risk. Catches K01091.01 (78h "transit", viol=1.413).
+         (src/models/taylor_cnn_v75.pt)
+V8   ⬜  Shape-based discrimination: V-shape (EB grazing) vs U-shape
+         (planet) via Taylor gate morphological parameters. Use
+         ingress/egress-to-flat-bottom ratio as EB discriminator.
+         Alternative: full Mandel-Agol joint fit + stellar density.
 ```
 
 ### V8 PSNN Architecture

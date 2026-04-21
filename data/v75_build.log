@@ -1,0 +1,22 @@
+=== V7.5: retrain V6 Config C + apply safe hard gate ===
+  Before gate (V6 C baseline): acc=76.3%  prec=71.7%  rec=86.8%  F1=0.786
+  After gate (V7.5, thr=1.0): acc=77.6%  prec=73.3%  rec=86.8%  F1=0.795
+  Gate filtered 8 TCE(s); blocked 0 real planet(s)
+  Gated KOIs: ['K03866.01', 'K01091.01', 'K03898.01', 'K03962.01', 'K03879.01', 'K01155.01', 'K07717.01', 'K03064.01']
+  Saved V7.5 model to src/models/taylor_cnn_v75.pt
+
+=== Figure 1: lambda_sweep.png ===
+Traceback (most recent call last):
+  File "C:\Users\skapa\Projects\ml-learning\nasa-ml-learning\scripts\build_v75_and_figures.py", line 360, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\skapa\Projects\ml-learning\nasa-ml-learning\scripts\build_v75_and_figures.py", line 353, in main
+    plot_lambda_sweep()
+    ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\skapa\Projects\ml-learning\nasa-ml-learning\scripts\build_v75_and_figures.py", line 209, in plot_lambda_sweep
+    asym = parse_sweep_log("data/v7_asymmetric_sweep.log")
+  File "C:\Users\skapa\Projects\ml-learning\nasa-ml-learning\scripts\build_v75_and_figures.py", line 189, in parse_sweep_log
+    for line in fh:
+                ^^
+  File "<frozen codecs>", line 325, in decode
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0x97 in position 135: invalid start byte

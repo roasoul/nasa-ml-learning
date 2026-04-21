@@ -1,0 +1,25 @@
+Loading data...
+Test-set FPs total: 38
+Test-set FPs flagged as EB (fpflag_ss=1): 33
+
+Selected 5 deepest planets and 5 deepest EB-flagged FPs.
+
+class   KOI          P_d    arch_h  fit_h   pred_h  arch_viol  fit_viol  depth_fit  rms    
+----------------------------------------------------------------------------------------
+PLANET  K00254.01    2.46   1.73    2.14    1.66    0.039      0.253     0.0450     0.0005 
+PLANET  K00183.01    2.68   2.69    2.97    2.54    0.060      0.156     0.0176     0.0001 
+PLANET  K01320.01    10.51  3.78    4.07    3.26    0.149      0.224     0.0823     0.0001 
+PLANET  K00840.01    3.04   1.84    2.14    2.29    0.217      0.064     0.0209     0.0001 
+PLANET  K00017.01    3.23   3.59    3.96    3.41    0.051      0.149     0.0103     0.0002 
+EB_FP   K03745.01    7.45   4.76    3.88    3.55    0.294      0.090     0.2101     0.0014 
+EB_FP   K01541.01    2.38   3.17    3.27    2.63    0.188      0.218     0.0471     0.0007 
+EB_FP   K07192.01    12.08  7.90    8.03    8.27    0.045      0.029     0.0946     0.0008 
+EB_FP   K07343.01    0.63   2.02    1.95    1.27    0.463      0.428     0.0359     0.0017 
+EB_FP   K07955.01    1.07   4.85    4.41    4.34    0.109      0.016     0.0353     0.0086 
+
+--- Separation analysis ---
+  Archive violation:  planets 0.039/0.060/0.217    EBs 0.045/0.188/0.463   (min/median/max)
+  Fitted violation:   planets 0.064/0.156/0.253    EBs 0.016/0.090/0.428
+  Separation gap (EB_min - planet_max): archive=-0.1713322103023529, fit=-0.23694579303264618
+  CONCLUSION: Fitted and archive violations are similarly useful (or useless).
+  V8 direction: direct fitting doesn't add much; pursue other V8 ideas.
