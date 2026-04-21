@@ -41,36 +41,36 @@ def make_synthetic_transit(
     noise_level: float = 0.005,
     duration_fraction: float = 0.1,
     secondary_depth: float = 0.0,
+    odd_even_diff_depth: float = 0.0,
     seed: int | None = 42,
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, dict]:
-    """Generate a synthetic light curve with primary + secondary views.
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, dict]:
+    """Generate a synthetic light curve with primary + secondary + odd/even views.
 
-    Produces two flux arrays on a shared phase grid, matching the V5
-    two-view data layout:
-        - Primary view: dip of `depth` centered at phase=0.
-        - Secondary view: dip of `secondary_depth` centered at phase=0.
-          This simulates an eclipsing binary's secondary eclipse seen
-          after phase-folding at `epoch + period/2`. Use 0 for planets
-          and non-transits; use a non-zero value for EB-like signals.
+    Produces three flux arrays on a shared phase grid, matching the V6
+    four-view data layout:
+        - Primary view:        dip of `depth` at phase=0.
+        - Secondary view:      dip of `secondary_depth` at phase=0.
+                               Simulates an EB's secondary eclipse after
+                               folding at epoch + period/2.
+        - Odd/even diff view:  dip of `odd_even_diff_depth` at phase=0.
+                               Simulates a period-doubled EB where odd and
+                               even transits have different depths —
+                               real-data diff = odd_fold - even_fold.
+                               Zero for planets.
 
     Args:
         n_points: Number of phase-folded data points.
-        depth: Fractional primary transit depth (0.01 = 1% dip). Set to
-            0 for a non-transit noise-only example.
-        noise_level: Standard deviation of Gaussian noise (0.005 = 0.5%).
-        duration_fraction: Fraction of the full phase that the transit
-            occupies. 0.1 means the dip spans 10% of the orbital period.
-        secondary_depth: Fractional depth of the secondary-view dip.
-            0 for planets/non-transits, non-zero for EBs.
+        depth: Primary transit depth (0.01 = 1% dip). 0 for non-transit.
+        noise_level: Gaussian noise std (0.005 = 0.5%).
+        duration_fraction: Fraction of phase the transit occupies.
+        secondary_depth: Depth of secondary-view dip. 0 for planets.
+        odd_even_diff_depth: Depth of odd/even-diff-view dip.
+            0 for planets and correct-period EBs; non-zero for
+            period-doubled EBs.
         seed: Random seed for reproducibility. None for random.
 
     Returns:
-        Tuple of (phase, primary_flux, secondary_flux, metadata):
-            phase: Shape (n_points,), values in [-π, π].
-            primary_flux: Shape (n_points,), dip of `depth` at phase=0.
-            secondary_flux: Shape (n_points,), dip of `secondary_depth`
-                at phase=0 (flat noise if secondary_depth == 0).
-            metadata: Dict with generation parameters.
+        (phase, primary_flux, secondary_flux, odd_even_diff, metadata)
     """
     if seed is not None:
         np.random.seed(seed)
@@ -79,70 +79,76 @@ def make_synthetic_transit(
 
     primary = _half_sine_dip(phase, depth, duration_fraction)
     secondary = _half_sine_dip(phase, secondary_depth, duration_fraction)
+    odd_even = _half_sine_dip(phase, odd_even_diff_depth, duration_fraction)
 
-    # Independent noise per view — they come from different fold-epochs of
-    # the same underlying data in the real pipeline, so the noise realizations
-    # differ even though the stellar noise spectrum is the same.
+    # Independent noise per view — in the real pipeline they come from
+    # different foldings of the same underlying data, so noise realizations
+    # differ. For the odd/even diff view, noise is sqrt(2)x larger because
+    # it's a difference of two independent folds; scale accordingly.
     primary += np.random.normal(0, noise_level, n_points)
     secondary += np.random.normal(0, noise_level, n_points)
+    odd_even += np.random.normal(0, noise_level * np.sqrt(2), n_points)
 
     phase_t = torch.tensor(phase, dtype=torch.float32)
     primary_t = torch.tensor(primary, dtype=torch.float32)
     secondary_t = torch.tensor(secondary, dtype=torch.float32)
+    odd_even_t = torch.tensor(odd_even, dtype=torch.float32)
 
     metadata = {
         "n_points": n_points,
         "depth": depth,
         "secondary_depth": secondary_depth,
+        "odd_even_diff_depth": odd_even_diff_depth,
         "noise_level": noise_level,
         "duration_fraction": duration_fraction,
         "seed": seed,
         "snr": depth / noise_level if noise_level > 0 else float("inf"),
     }
 
-    return phase_t, primary_t, secondary_t, metadata
+    return phase_t, primary_t, secondary_t, odd_even_t, metadata
 
 
 def make_synthetic_batch(
     n_planets: int = 32,
     n_eclipsing_binaries: int = 16,
+    n_eb_doubled: int = 16,
     n_non_transits: int = 16,
     n_points: int = 200,
     depth_range: tuple[float, float] = (0.005, 0.02),
     eb_secondary_range: tuple[float, float] = (0.003, 0.015),
+    eb_odd_even_range: tuple[float, float] = (0.003, 0.015),
     noise_level: float = 0.005,
     seed: int | None = 42,
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-    """Generate a batch of synthetic two-view light curves with labels.
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Generate a batch of synthetic four-view light curves with labels.
 
-    V5 distinguishes three underlying classes but uses binary labels
-    because the downstream task is "planet vs. not-a-planet":
-        - Planet (label=1): primary dip, flat secondary view
-        - Eclipsing binary (label=0): primary dip AND secondary dip
-        - Non-transit (label=0): noise in both views
+    V6 distinguishes four underlying classes but uses binary labels
+    (planet vs. not-a-planet):
+        - Planet (label=1):          primary dip, flat secondary, flat odd/even
+        - EB correct period (0):     primary dip + secondary dip, flat odd/even
+        - EB doubled period (0):     primary dip, flat secondary, odd/even dip
+        - Non-transit (0):           noise in all views
 
-    EB primary depths are drawn from the same range as planets (they
-    often look indistinguishable in the primary view alone — which is
-    exactly why V4 confused them). The secondary channel is what the
-    model must learn to exploit.
+    The EB-doubled class targets the V5 failure mode: TCE detection
+    misfits the period as 2·P_true, so every "transit" alternates
+    between the true primary and secondary eclipses — invisible in the
+    secondary channel (it sees the same averaged dip) but visible in
+    odd_fold - even_fold.
 
     Args:
-        n_planets: Number of planet examples (label=1).
-        n_eclipsing_binaries: Number of EB examples (label=0, primary +
-            secondary dip).
-        n_non_transits: Number of noise-only examples (label=0).
-        n_points: Points per light curve.
-        depth_range: (min, max) for primary-dip depth.
-        eb_secondary_range: (min, max) for EB secondary-dip depth.
-        noise_level: Gaussian noise standard deviation.
-        seed: Random seed for reproducibility.
+        n_planets:             Planet examples (label=1).
+        n_eclipsing_binaries:  EB-correct-period examples (label=0).
+        n_eb_doubled:          EB-doubled-period examples (label=0, new in V6).
+        n_non_transits:        Noise-only examples (label=0).
+        n_points:              Points per light curve.
+        depth_range:           (min, max) for primary depth.
+        eb_secondary_range:    (min, max) for EB secondary depth.
+        eb_odd_even_range:     (min, max) for odd/even diff depth.
+        noise_level:           Gaussian noise std.
+        seed:                  Random seed.
 
     Returns:
-        Tuple of (phases, primary_fluxes, secondary_fluxes, labels):
-            phases:             (n_total, n_points)
-            primary_fluxes:     (n_total, n_points)
-            secondary_fluxes:   (n_total, n_points)
-            labels:             (n_total,)  — 1 for planet, else 0
+        (phases, primary_fluxes, secondary_fluxes, odd_even_fluxes, labels)
     """
     if seed is not None:
         np.random.seed(seed)
@@ -150,56 +156,58 @@ def make_synthetic_batch(
     phases: list[torch.Tensor] = []
     primaries: list[torch.Tensor] = []
     secondaries: list[torch.Tensor] = []
+    odd_evens: list[torch.Tensor] = []
     labels: list[int] = []
 
-    # Planets: primary dip only
+    def _append(ph, p, s, oe, lbl):
+        phases.append(ph); primaries.append(p); secondaries.append(s)
+        odd_evens.append(oe); labels.append(lbl)
+
+    # Planets
     for _ in range(n_planets):
         depth = np.random.uniform(*depth_range)
-        ph, p, s, _ = make_synthetic_transit(
-            n_points=n_points,
-            depth=depth,
-            secondary_depth=0.0,
-            noise_level=noise_level,
-            seed=None,
+        ph, p, s, oe, _ = make_synthetic_transit(
+            n_points=n_points, depth=depth,
+            secondary_depth=0.0, odd_even_diff_depth=0.0,
+            noise_level=noise_level, seed=None,
         )
-        phases.append(ph)
-        primaries.append(p)
-        secondaries.append(s)
-        labels.append(1)
+        _append(ph, p, s, oe, 1)
 
-    # Eclipsing binaries: primary dip + secondary dip
+    # Correct-period EBs: secondary dip, flat odd/even
     for _ in range(n_eclipsing_binaries):
         depth = np.random.uniform(*depth_range)
-        sec_depth = np.random.uniform(*eb_secondary_range)
-        ph, p, s, _ = make_synthetic_transit(
-            n_points=n_points,
-            depth=depth,
-            secondary_depth=sec_depth,
-            noise_level=noise_level,
-            seed=None,
+        sec = np.random.uniform(*eb_secondary_range)
+        ph, p, s, oe, _ = make_synthetic_transit(
+            n_points=n_points, depth=depth,
+            secondary_depth=sec, odd_even_diff_depth=0.0,
+            noise_level=noise_level, seed=None,
         )
-        phases.append(ph)
-        primaries.append(p)
-        secondaries.append(s)
-        labels.append(0)
+        _append(ph, p, s, oe, 0)
 
-    # Non-transits: noise in both views
+    # Doubled-period EBs: flat secondary, odd/even dip
+    for _ in range(n_eb_doubled):
+        depth = np.random.uniform(*depth_range)
+        oe_d = np.random.uniform(*eb_odd_even_range)
+        ph, p, s, oe, _ = make_synthetic_transit(
+            n_points=n_points, depth=depth,
+            secondary_depth=0.0, odd_even_diff_depth=oe_d,
+            noise_level=noise_level, seed=None,
+        )
+        _append(ph, p, s, oe, 0)
+
+    # Non-transits: noise in all views
     for _ in range(n_non_transits):
-        ph, p, s, _ = make_synthetic_transit(
-            n_points=n_points,
-            depth=0.0,
-            secondary_depth=0.0,
-            noise_level=noise_level,
-            seed=None,
+        ph, p, s, oe, _ = make_synthetic_transit(
+            n_points=n_points, depth=0.0,
+            secondary_depth=0.0, odd_even_diff_depth=0.0,
+            noise_level=noise_level, seed=None,
         )
-        phases.append(ph)
-        primaries.append(p)
-        secondaries.append(s)
-        labels.append(0)
+        _append(ph, p, s, oe, 0)
 
-    phases_t = torch.stack(phases)
-    primary_t = torch.stack(primaries)
-    secondary_t = torch.stack(secondaries)
-    labels_t = torch.tensor(labels, dtype=torch.float32)
-
-    return phases_t, primary_t, secondary_t, labels_t
+    return (
+        torch.stack(phases),
+        torch.stack(primaries),
+        torch.stack(secondaries),
+        torch.stack(odd_evens),
+        torch.tensor(labels, dtype=torch.float32),
+    )

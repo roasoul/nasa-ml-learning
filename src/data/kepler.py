@@ -200,24 +200,25 @@ def preprocess_lightcurve(
     period: float,
     epoch: float,
     n_points: int = 200,
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    """Apply the full CLAUDE.md preprocessing pipeline with secondary view.
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Apply the full CLAUDE.md preprocessing pipeline with 4 output views.
 
     Pipeline:
-        1. flatten()    — remove stellar variability
-        2. normalize()  — center flux at 1.0
-        3a. Primary   fold at epoch             → transit dip at phase=0
-        3b. Secondary fold at epoch + period/2  → any secondary eclipse at phase=0
+        1. flatten()   — remove stellar variability
+        2. normalize() — center flux at 1.0
+        3a. Primary        fold at epoch              → transit dip at phase=0
+        3b. Secondary      fold at epoch + period/2   → secondary eclipse at phase=0
+        3c. Odd/even diff  fold odd and even transits separately, take diff
         4. phase → [-π, π]
         5. flux -= 1.0  — baseline at 0
         6. phase-bin each view to n_points
 
-    The secondary view is V5's addition. For a circular EB, the secondary
-    eclipse sits half an orbit after the primary. Re-folding at the shifted
-    epoch places that secondary dip at phase=0, mirroring the primary
-    view's layout so the CNN can compare them channel-by-channel.
-    Planets produce a flat secondary view (no second eclipse); EBs produce
-    a clear dip.
+    View 3c (new in V6) catches period-doubled EBs: if the TCE detection
+    pipeline picked a period of 2·P_true (mistaking primary AND secondary
+    eclipses as the same "transit"), odd-indexed transits show the primary
+    eclipse depth and even-indexed transits show the secondary. The diff
+    peaks at phase=0 for EBs; for real planets odd/even are consistent
+    and the diff is flat noise.
 
     Args:
         lc: Raw lightkurve LightCurve object.
@@ -226,33 +227,71 @@ def preprocess_lightcurve(
         n_points: Number of output phase bins per view.
 
     Returns:
-        Tuple of (phase, primary_flux, secondary_flux) tensors, each
-        shape (n_points,). Phase in [-π, π]; both fluxes baseline-at-0.
+        Tuple of (phase, primary_flux, secondary_flux, odd_even_diff)
+        tensors, each shape (n_points,). Phase in [-π, π]; fluxes
+        baseline-at-0. odd_even_diff = odd_fold - even_fold.
     """
-    # Step 1: Flatten — remove long-term stellar variability and
-    # instrumental trends using a Savitzky-Golay filter. window_length
-    # must be odd; 401 cadences ≈ 8 days for long-cadence (30-min) data.
     lc_flat = lc.flatten(window_length=401)
-
-    # Step 2: Normalize — divide by median flux so baseline ≈ 1.0
     lc_norm = lc_flat.normalize()
 
-    # Step 3a: Primary fold — transit at phase=0.
     primary_phase, primary_flux = _fold_and_bin(
         lc_norm, period=period, epoch_time=epoch, n_points=n_points
     )
 
-    # Step 3b: Secondary fold — shift epoch by half a period so any
-    # secondary eclipse appears at phase=0 in this view. For circular
-    # orbits this is exact; for mildly eccentric orbits the secondary
-    # may be slightly offset in phase but typically still within the bin.
-    secondary_flux_phase, secondary_flux = _fold_and_bin(
+    _, secondary_flux = _fold_and_bin(
         lc_norm, period=period, epoch_time=epoch + period / 2.0, n_points=n_points
     )
 
-    # primary_phase and secondary_flux_phase are identical grids — return
-    # one. The CNN only needs the phase axis once; flux is per-view.
-    return primary_phase, primary_flux, secondary_flux
+    odd_even_diff = _fold_odd_even_diff(
+        lc_norm, period=period, epoch=epoch, n_points=n_points
+    )
+
+    return primary_phase, primary_flux, secondary_flux, odd_even_diff
+
+
+def _fold_odd_even_diff(
+    lc_norm: lk.LightCurve,
+    period: float,
+    epoch: float,
+    n_points: int,
+) -> torch.Tensor:
+    """Compute odd-transit-fold minus even-transit-fold, phase-binned.
+
+    For each data point, determine which transit it belongs to via
+        N = round((t - epoch) / period)
+    then split into "odd" (N even — 0th, 2nd, 4th... transit) and
+    "even" (N odd — 1st, 3rd, 5th...) subsets. Fold each subset at the
+    TCE epoch and phase-bin to n_points. Return odd - even.
+
+    Why this catches period-doubled EBs: if the pipeline fit period =
+    2·P_true, then transits 0, 2, 4... are actually primary eclipses
+    at the correct physical period while transits 1, 3, 5... are
+    secondary eclipses. Their depths differ, so odd - even shows a
+    residual dip (or bump) at phase=0.
+
+    For real planets, odd and even folds overlap within noise → diff
+    is flat. For EBs correctly fit at period = P_true, both odd and
+    even contain the same primary eclipse → diff is also flat (this
+    case is caught by the secondary-view channel instead).
+
+    Edge case: if the LC has only transits of one parity (rare for
+    Kepler's 4-year baseline), returns zeros so the channel stays
+    well-defined but carries no information.
+    """
+    time_arr = np.asarray(lc_norm.time.value)
+    transit_number = np.round((time_arr - epoch) / period).astype(int)
+    is_odd_fold = (transit_number % 2) == 0  # N=0 (first transit) counts as "odd"
+
+    lc_odd = lc_norm[is_odd_fold]
+    lc_even = lc_norm[~is_odd_fold]
+
+    if len(lc_odd) == 0 or len(lc_even) == 0:
+        return torch.zeros(n_points, dtype=torch.float32)
+
+    _, odd_flux = _fold_and_bin(lc_odd, period=period, epoch_time=epoch, n_points=n_points)
+    _, even_flux = _fold_and_bin(lc_even, period=period, epoch_time=epoch, n_points=n_points)
+
+    return odd_flux - even_flux
 
 
 def _fold_and_bin(
@@ -311,7 +350,7 @@ def phase_bin(
 def download_and_preprocess(
     target: dict,
     n_points: int = 200,
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """Download and preprocess a single target end-to-end.
 
     Args:
@@ -319,11 +358,10 @@ def download_and_preprocess(
         n_points: Number of output phase bins.
 
     Returns:
-        Tuple of (phase, primary_flux, secondary_flux) tensors,
-        each shape (n_points,).
+        Tuple of (phase, primary_flux, secondary_flux, odd_even_diff)
+        tensors, each shape (n_points,).
     """
     lc = download_lightcurve(target["kepid"])
-    phase, primary_flux, secondary_flux = preprocess_lightcurve(
+    return preprocess_lightcurve(
         lc, target["period"], target["epoch"], n_points
     )
-    return phase, primary_flux, secondary_flux

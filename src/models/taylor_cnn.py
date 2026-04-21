@@ -1,42 +1,41 @@
-"""Three-channel Taylor-CNN classifier (V5) with primary + secondary views.
+"""Four-channel Taylor-CNN classifier (V6) — primary + secondary + odd/even diff.
 
 Architecture:
     The Taylor gate models the ideal transit dip shape from phase alone.
-    The CNN receives THREE stacked channels:
-        Channel 0: gate output on primary phase (physics: what a transit
-                   should look like, symmetric dip at phase=0).
-        Channel 1: primary flux   (LC folded at the TCE epoch).
-        Channel 2: secondary flux (LC folded at epoch + period/2 — any
-                   secondary eclipse shows up as a dip at phase=0 here).
+    The CNN receives FOUR stacked channels:
+        Channel 0: gate output on primary phase — physics prior, a symmetric
+                   dip at phase=0.
+        Channel 1: primary flux   (LC folded at TCE epoch).
+        Channel 2: secondary flux (LC folded at epoch + period/2 — secondary
+                   eclipse shows up as dip at phase=0 for correct-period EBs).
+        Channel 3: odd_fold - even_fold diff — alternating depth shows up as
+                   a non-zero dip at phase=0 for period-doubled EBs; flat for
+                   planets and correct-period EBs.
 
-    Planets: channel 2 is flat noise.
-    Eclipsing binaries: channel 2 has a clear dip, matching channel 1.
-    The CNN can learn to compare channels 1 and 2 — if they both look
-    transit-like, suppress the output; if only channel 1 looks transit-like,
-    trust the classification.
+    Planet: channels 2 and 3 are both flat noise; channel 1 has a dip.
+    EB correct period: channel 2 has a dip; channel 3 is flat.
+    EB doubled period: channel 2 is flat; channel 3 has a dip.
 
 Data flow with shapes (batch=B, seq_len=200):
-    phase: (B, 200)  primary_flux: (B, 200)  secondary_flux: (B, 200)
-        │                   │                     │
-        ▼                   │                     │
-    TaylorGate              │                     │
-    → gate_out (B, 200)     │                     │
-        │                   ▼                     ▼
-    stack → (B, 3, 200)     [ch0=gate, ch1=primary, ch2=secondary]
+    phase, primary, secondary, odd_even : each (B, 200)
+        │       │        │         │
+        ▼       │        │         │
+    TaylorGate  │        │         │
+    gate_out (B,200)     │         │
+        │       ▼        ▼         ▼
+    stack → (B, 4, 200)  [ch0=gate, ch1=primary, ch2=secondary, ch3=odd/even]
         │
-    BatchNorm1d(3)
-    Conv1d(3→8, k=7) + ReLU
+    BatchNorm1d(4)
+    Conv1d(4→8, k=7) + ReLU
     Conv1d(8→16, k=5) + ReLU
     AdaptiveAvgPool → (B, 16)
         │
     Linear(16, 1) → sigmoid → p(planet)
 
-Why the Taylor gate stays on the primary only:
-    The physics-informed layer encodes "a real planet transit is a
-    symmetric dip at phase=0." That statement is about the primary
-    view. The secondary channel exists to contradict the primary on
-    EBs — we want the CNN to learn its own filter there, not to
-    re-impose the same dip template.
+Taylor gate stays on primary only: the physics-informed layer encodes
+"a real planet transit is a symmetric dip at phase=0" — a statement
+about the primary view. The other channels exist to contradict the
+primary; we want the CNN to learn its own filters there.
 """
 
 import torch
@@ -46,20 +45,20 @@ from src.models.taylor_layer import TaylorGateLayer
 
 
 class TaylorCNN(nn.Module):
-    """Three-channel physics-informed transit classifier (V5).
+    """Four-channel physics-informed transit classifier (V6).
 
     Args:
-        init_amplitude: Starting value for the Taylor gate's learnable
-            amplitude A. Should be near expected transit depth.
-        n_filters_1: Number of filters in the first CNN layer.
-        n_filters_2: Number of filters in the second CNN layer.
+        init_amplitude: Starting value for the Taylor gate's learnable A.
+        n_filters_1: Filters in the first Conv1d layer.
+        n_filters_2: Filters in the second Conv1d layer.
 
     Example:
         >>> model = TaylorCNN(init_amplitude=0.01)
         >>> phase = torch.linspace(-3.14, 3.14, 200).unsqueeze(0)
-        >>> primary = torch.randn(1, 200) * 0.005
-        >>> secondary = torch.randn(1, 200) * 0.005
-        >>> prob = model(phase, primary, secondary)
+        >>> p = torch.randn(1, 200) * 0.005
+        >>> s = torch.randn(1, 200) * 0.005
+        >>> oe = torch.randn(1, 200) * 0.005
+        >>> prob = model(phase, p, s, oe)
     """
 
     def __init__(
@@ -70,27 +69,18 @@ class TaylorCNN(nn.Module):
     ) -> None:
         super().__init__()
 
-        # --- Physics model (primary view only) ---
         self.taylor_gate = TaylorGateLayer(init_amplitude=init_amplitude)
 
-        # --- CNN over 3 channels: [gate, primary, secondary] ---
-        # BatchNorm first: gate and flux values are tiny (~0.01) while conv
-        # weights initialize at ~0.1. Without normalization, gradients are
-        # too small for efficient learning. BatchNorm1d(3) independently
-        # normalizes each channel to zero mean / unit variance.
+        # CNN over 4 channels: [gate, primary, secondary, odd/even_diff]
         self.cnn = nn.Sequential(
-            nn.BatchNorm1d(3),
-
-            # Layer 1: (B, 3, 200) → (B, 8, 200)
+            nn.BatchNorm1d(4),
             nn.Conv1d(
-                in_channels=3,
+                in_channels=4,
                 out_channels=n_filters_1,
                 kernel_size=7,
                 padding=3,
             ),
             nn.ReLU(),
-
-            # Layer 2: (B, 8, 200) → (B, 16, 200)
             nn.Conv1d(
                 in_channels=n_filters_1,
                 out_channels=n_filters_2,
@@ -98,12 +88,9 @@ class TaylorCNN(nn.Module):
                 padding=2,
             ),
             nn.ReLU(),
-
-            # Pool: (B, 16, 200) → (B, 16, 1)
             nn.AdaptiveAvgPool1d(1),
         )
 
-        # --- Classifier ---
         self.classifier = nn.Linear(n_filters_2, 1)
 
     def forward(
@@ -111,28 +98,28 @@ class TaylorCNN(nn.Module):
         phase: torch.Tensor,
         primary_flux: torch.Tensor,
         secondary_flux: torch.Tensor,
+        odd_even_diff: torch.Tensor,
     ) -> torch.Tensor:
         """Classify a light curve as planet vs. not-planet.
 
         Args:
-            phase: Phase values in [-π, π], shape (batch, seq_len).
-            primary_flux: Primary-view flux (folded at TCE epoch),
-                baseline-subtracted, shape (batch, seq_len).
-            secondary_flux: Secondary-view flux (folded at epoch +
-                period/2), baseline-subtracted, shape (batch, seq_len).
+            phase: Phase in [-π, π], shape (batch, seq_len).
+            primary_flux:   Primary-view flux, shape (batch, seq_len).
+            secondary_flux: Secondary-view flux (fold at epoch + period/2),
+                            shape (batch, seq_len).
+            odd_even_diff:  Odd-fold minus even-fold, shape (batch, seq_len).
 
         Returns:
             Planet probability, shape (batch, 1). Values in [0, 1].
         """
-        gate_out = self.taylor_gate(phase)  # (B, seq_len)
+        gate_out = self.taylor_gate(phase)
 
-        # 3-channel stack
-        x = torch.stack([gate_out, primary_flux, secondary_flux], dim=1)
+        x = torch.stack(
+            [gate_out, primary_flux, secondary_flux, odd_even_diff], dim=1
+        )
 
-        cnn_out = self.cnn(x)          # (B, 16, 1)
-        features = cnn_out.squeeze(2)  # (B, 16)
+        cnn_out = self.cnn(x)
+        features = cnn_out.squeeze(2)
 
         logits = self.classifier(features)
-        prob = torch.sigmoid(logits)
-
-        return prob
+        return torch.sigmoid(logits)

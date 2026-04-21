@@ -98,6 +98,7 @@ def build_dataset(
     all_phases = []
     all_fluxes = []
     all_fluxes_secondary = []
+    all_fluxes_odd_even = []
     all_labels = []
     all_names = []
     all_depths = []
@@ -119,23 +120,27 @@ def build_dataset(
         t0 = time.time()
         try:
             lc = download_lightcurve(target["kepid"])
-            phase, primary_flux, secondary_flux = preprocess_lightcurve(
+            phase, primary_flux, secondary_flux, odd_even_diff = preprocess_lightcurve(
                 lc, target["period"], target["epoch"], n_points
             )
 
             all_phases.append(phase)
             all_fluxes.append(primary_flux)
             all_fluxes_secondary.append(secondary_flux)
+            all_fluxes_odd_even.append(odd_even_diff)
             all_labels.append(label)
             all_names.append(name)
             all_depths.append(target["depth_ppm"])
             n_success += 1
 
             elapsed = time.time() - t0
+            # oe_amp = peak absolute value of the odd/even diff near phase=0
+            oe_amp = float(odd_even_diff[95:105].abs().max())
             print(
                 f"OK  ({elapsed:.0f}s, "
                 f"p_dip={primary_flux.min():.4f}, "
-                f"s_dip={secondary_flux.min():.4f})"
+                f"s_dip={secondary_flux.min():.4f}, "
+                f"oe_amp={oe_amp:.4f})"
             )
 
         except Exception as e:
@@ -146,17 +151,18 @@ def build_dataset(
     print(f"\nCompleted: {n_success} success, {n_fail} failed")
 
     # Stack into tensors
-    phases = torch.stack(all_phases)                     # (N, n_points)
-    fluxes = torch.stack(all_fluxes)                     # (N, n_points)
-    fluxes_secondary = torch.stack(all_fluxes_secondary) # (N, n_points)
+    phases = torch.stack(all_phases)
+    fluxes = torch.stack(all_fluxes)
+    fluxes_secondary = torch.stack(all_fluxes_secondary)
+    fluxes_odd_even = torch.stack(all_fluxes_odd_even)
     labels = torch.tensor(all_labels, dtype=torch.float32)
 
-    # Save
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     dataset = {
         "phases": phases,
         "fluxes": fluxes,
         "fluxes_secondary": fluxes_secondary,
+        "fluxes_odd_even": fluxes_odd_even,
         "labels": labels,
         "names": all_names,
         "depths_ppm": all_depths,
@@ -167,6 +173,7 @@ def build_dataset(
     print(f"  Phases shape:    {phases.shape}")
     print(f"  Primary shape:   {fluxes.shape}")
     print(f"  Secondary shape: {fluxes_secondary.shape}")
+    print(f"  Odd/even shape:  {fluxes_odd_even.shape}")
     print(f"  Confirmed: {int(labels.sum())}, FP: {int((1 - labels).sum())}")
 
 
