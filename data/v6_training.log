@@ -1,0 +1,148 @@
+Device: cuda
+Dataset: 500 TCEs (250 conf, 250 FP)
+Train: 350  Val: 74  Test: 76
+  matched ranges — primary: (0.0006, 0.0348)  secondary: (0.0000, 0.0107)  odd/even: (0.0001, 0.0042)
+
+============================================================
+Config C — from-scratch (no pretraining)
+============================================================
+  Fine-tuning on real Kepler
+    finetune ep  25  val_loss=0.5475  wait=2
+    finetune ep  50  val_loss=0.5142  wait=0
+    finetune ep  75  val_loss=0.5044  wait=5
+    finetune ep 100  val_loss=0.4784  wait=3
+    finetune ep 125  val_loss=0.4660  wait=3
+    finetune ep 150  val_loss=0.4633  wait=5
+    finetune ep 175  val_loss=0.4446  wait=10
+    finetune ep 200  val_loss=0.4428  wait=3
+  Result: acc=80.3%  prec=76.7%  rec=86.8%  F1=0.815  A=0.02816
+
+============================================================
+Config A — synthetic pretrain + BN reset
+============================================================
+  Pretraining on synthetic
+    pretrain ep   1  loss=0.6952  acc=50.0%  A=0.01161
+    pretrain ep  10  loss=0.4771  acc=82.0%  A=0.08319
+    pretrain ep  20  loss=0.3649  acc=83.5%  A=0.09386
+    pretrain ep  30  loss=0.3143  acc=87.0%  A=0.07793
+    pretrain ep  40  loss=0.2613  acc=90.8%  A=0.07759
+  Resetting BatchNorm running stats
+  Fine-tuning on real Kepler
+    finetune ep  25  val_loss=0.5479  wait=14
+    finetune ep  50  val_loss=0.5361  wait=0
+    finetune ep  75  val_loss=0.5319  wait=8
+    stop at ep 92
+  Result: acc=72.4%  prec=67.3%  rec=86.8%  F1=0.759  A=0.07466
+
+============================================================
+Config B — depth-matched synthetic pretrain (no BN reset)
+============================================================
+  Pretraining on synthetic
+    pretrain ep   1  loss=0.6950  acc=50.0%  A=0.00705
+    pretrain ep  10  loss=0.5594  acc=73.5%  A=0.06375
+    pretrain ep  20  loss=0.4985  acc=76.3%  A=0.07006
+    pretrain ep  30  loss=0.4487  acc=79.2%  A=0.07621
+    pretrain ep  40  loss=0.3909  acc=84.0%  A=0.09909
+  Fine-tuning on real Kepler
+    finetune ep  25  val_loss=0.5515  wait=0
+    finetune ep  50  val_loss=0.5368  wait=0
+    finetune ep  75  val_loss=0.5269  wait=8
+    finetune ep 100  val_loss=0.5203  wait=6
+    finetune ep 125  val_loss=0.5043  wait=8
+    finetune ep 150  val_loss=0.4930  wait=1
+    finetune ep 175  val_loss=0.4771  wait=3
+    finetune ep 200  val_loss=0.4707  wait=5
+  Result: acc=78.9%  prec=72.0%  rec=94.7%  F1=0.818  A=0.09058
+
+========================================================================
+Three-way comparison
+========================================================================
+Config       Acc    Prec     Rec      F1  TP  FP  TN  FN       A  val_loss
+------------------------------------------------------------------------
+C         80.3%   76.7%   86.8%   0.815   33  10  28   5  0.0282     0.4361
+A         72.4%   67.3%   86.8%   0.759   33  16  22   5  0.0747     0.5260
+B         78.9%   72.0%   94.7%   0.818   36  14  24   2  0.0906     0.4650
+
+Winner: Config B
+Success criterion (prec > 80% AND recall = 100%): FAIL
+
+Winner per-TCE predictions:
+  KOI          true     prob   pred     p_dip    s_dip    oe_amp 
+  K00408.01    PLANET   0.71   PLANET   -0.0014 -0.0000 0.0001
+  K00232.01    PLANET   0.73   PLANET   -0.0022 -0.0000 0.0001
+  K00463.01    PLANET   0.74   PLANET   -0.0005 -0.0001 0.0002
+  K01456.01    PLANET   0.75   PLANET   -0.0059 -0.0004 0.0011
+  K00223.01    PLANET   0.72   PLANET   -0.0011 -0.0000 0.0005
+  K00013.01    PLANET   0.55   PLANET   -0.0047 -0.0001 0.0000
+  K00214.01    PLANET   0.71   PLANET   -0.0053 -0.0000 0.0001
+  K00250.01    PLANET   0.74   PLANET   -0.0022 -0.0000 0.0002
+  K00840.01    PLANET   0.61   PLANET   -0.0107 -0.0001 0.0003
+  K00875.01    PLANET   0.71   PLANET   -0.0022 -0.0000 0.0002
+  K01907.01    PLANET   0.74   PLANET   -0.0008 -0.0000 0.0001
+  K01078.03    PLANET   0.72   PLANET   -0.0004 -0.0001 0.0003
+  K00912.01    PLANET   0.62   PLANET   -0.0019 -0.0002 0.0003
+  K00204.01    PLANET   0.63   PLANET   -0.0070 -0.0000 0.0002
+  K02113.01    PLANET   0.73   PLANET   -0.0008 -0.0001 0.0002
+  K00205.01    PLANET   0.67   PLANET   -0.0088 -0.0000 0.0001
+  K00818.01    PLANET   0.72   PLANET   -0.0014 -0.0002 0.0002
+  K00756.01    PLANET   0.73   PLANET   -0.0015 -0.0001 0.0002
+  K00135.01    PLANET   0.61   PLANET   -0.0077 -0.0000 0.0004
+  K00253.01    PLANET   0.71   PLANET   -0.0021 -0.0001 0.0003
+  K00003.01    PLANET   0.70   PLANET   -0.0041 -0.0000 0.0003
+  K01320.01    PLANET   0.60   PLANET   -0.0126 -0.0001 0.0004
+  K02793.02    PLANET   0.69   PLANET   -0.0010 -0.0002 0.0005
+  K00934.01    PLANET   0.72   PLANET   -0.0015 -0.0001 0.0001
+  K00942.01    PLANET   0.75   PLANET   -0.0008 -0.0000 0.0001
+  K01627.01    PLANET   0.75   PLANET   -0.0009 -0.0001 0.0002
+  K00787.01    PLANET   0.71   PLANET   -0.0010 -0.0000 0.0001
+  K00947.01    PLANET   0.73   PLANET   -0.0007 -0.0001 0.0003
+  K00254.01    PLANET   0.23   NOT      -0.0360 -0.0001 0.0009  <-- wrong
+  K00137.02    PLANET   0.73   PLANET   -0.0029 -0.0000 0.0001
+  K00766.01    PLANET   0.71   PLANET   -0.0015 -0.0000 0.0001
+  K00884.01    PLANET   0.73   PLANET   -0.0027 -0.0000 0.0001
+  K00200.01    PLANET   0.68   PLANET   -0.0082 -0.0000 0.0003
+  K00183.01    PLANET   0.43   NOT      -0.0180 -0.0000 0.0003  <-- wrong
+  K02926.01    PLANET   0.68   PLANET   -0.0014 -0.0002 0.0003
+  K00398.02    PLANET   0.71   PLANET   -0.0017 -0.0000 0.0001
+  K00941.01    PLANET   0.71   PLANET   -0.0022 -0.0000 0.0001
+  K00017.01    PLANET   0.55   PLANET   -0.0105 -0.0000 0.0001
+  K04560.01    FP       0.11   NOT      -0.0013 -0.0012 0.0001
+  K06244.01    FP       0.11   NOT      -0.0274 -0.0029 0.0006
+  K00230.01    FP       0.52   PLANET   -0.0043 -0.0005 0.0006  <-- wrong
+  K03745.01    FP       0.00   NOT      -0.0660 -0.0117 0.0091
+  K07022.01    FP       0.47   NOT      -0.0080 -0.0051 0.0005
+  K06464.01    FP       0.65   PLANET   -0.0087 -0.0000 0.0002  <-- wrong
+  K03785.01    FP       0.58   PLANET   -0.0009 -0.0010 0.0001  <-- wrong
+  K00741.01    FP       0.56   PLANET   -0.0181 -0.0000 0.0003  <-- wrong
+  K01183.01    FP       0.38   NOT      -0.0023 -0.0000 0.0020
+  K03866.01    FP       0.00   NOT      -0.0092 -0.0042 0.0008
+  K01091.01    FP       0.14   NOT      -0.0012 -0.0000 0.0475
+  K03399.01    FP       0.20   NOT      -0.0152 -0.0009 0.0032
+  K01795.01    FP       0.13   NOT      -0.0060 -0.0010 0.0013
+  K01949.01    FP       0.01   NOT      -0.0237 -0.0014 0.0018
+  K03898.01    FP       0.00   NOT      -0.0115 -0.0024 0.0005
+  K07192.01    FP       0.17   NOT      -0.0421 -0.0000 0.0008
+  K03615.01    FP       0.65   PLANET   -0.0076 -0.0000 0.0062  <-- wrong
+  K07343.01    FP       0.00   NOT      -0.0371 +0.0021 0.0104
+  K03962.01    FP       0.02   NOT      -0.0072 -0.0017 0.0006
+  K07403.01    FP       0.10   NOT      -0.0150 +0.0001 0.0042
+  K00983.02    FP       0.67   PLANET   -0.0012 -0.0005 0.0002  <-- wrong
+  K00048.01    FP       0.55   PLANET   -0.0189 -0.0000 0.0002  <-- wrong
+  K03695.01    FP       0.03   NOT      -0.0110 -0.0025 0.0024
+  K03650.01    FP       0.19   NOT      -0.0256 -0.0008 0.0180
+  K03879.01    FP       0.38   NOT      -0.0020 -0.0003 0.0002
+  K01541.01    FP       0.00   NOT      -0.0487 -0.0016 0.0015
+  K05189.01    FP       0.63   PLANET   -0.0010 -0.0004 0.0003  <-- wrong
+  K01155.01    FP       0.18   NOT      -0.0032 +0.0002 0.0002
+  K00023.01    FP       0.13   NOT      -0.0147 -0.0006 0.0001
+  K01896.01    FP       0.60   PLANET   -0.0014 -0.0000 0.0008  <-- wrong
+  K00402.01    FP       0.44   NOT      -0.0239 -0.0005 0.0001
+  K00225.01    FP       0.64   PLANET   -0.0025 -0.0000 0.0005  <-- wrong
+  K01156.01    FP       0.57   PLANET   -0.0029 -0.0008 0.0001  <-- wrong
+  K07955.01    FP       0.00   NOT      -0.0352 -0.0190 0.0014
+  K01484.01    FP       0.73   PLANET   -0.0011 -0.0000 0.0003  <-- wrong
+  K00132.01    FP       0.63   PLANET   -0.0055 -0.0003 0.0002  <-- wrong
+  K07717.01    FP       0.27   NOT      -0.0020 +0.0001 0.0007
+  K03064.01    FP       0.51   PLANET   -0.0011 -0.0002 0.0002  <-- wrong
+
+Saved winner (config B) to src/models/taylor_cnn_v6.pt
