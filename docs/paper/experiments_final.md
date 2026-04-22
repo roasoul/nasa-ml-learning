@@ -25,7 +25,10 @@ AND (F1 0.872) remains session best.
 | Exp 7 — V5 + V10 ensembles        | 63-83%| 58-84%| 82-95% | 0.72–0.83 | all below V10 alone |
 | Exp 3 — TESS zero-shot (8 TCEs)   | 87.5% | 80.0% |100.0%  | 0.889 | **beats Malik et al. 63% recall** |
 | Exp 4 — V10 retrained on 1114 Kepler | 75.9% | 58.2% | 85.2%  | 0.692 | 170-TCE held-out, pos_weight 2.18 — precision collapses |
+| Exp 4 no-weight — 1114 (170-TCE test) | 81.2% | 76.2% | 59.3%  | 0.667 | precision recovers, recall halves — still below V10-500 |
+| Exp 4 no-weight — 1114 on 76-TCE test | 69.7% | 89.5% | 44.7%  | 0.596 | highest-ever precision but catastrophic recall |
 | Exp 4 — V10 1114 → TESS 355 (zero)    | 48.2% | 53.6% | 55.8%  | 0.547 | full 355-TCE TOI mix, much harder than Exp 3's 15 |
+| Exp 4 no-weight — 1114 → TESS 355     | 49.3% | 60.0% | 28.6%  | 0.388 | removing pos_weight hurts TESS recall further |
 | Exp 4b — V10 TESS-native              | 56.4% | 56.4% | 100.0% | 0.721 | **degenerate** — always-planet, TN=FN=0 |
 | Exp 4b — V10 TESS-native → Kepler 76 | 50.0% | 50.0% | 100.0% | 0.667 | **degenerate** — always-planet |
 | Exp 4c — AND ensemble (Kepler 76)     | 85.5% | 82.9% | 89.5%  | 0.861 | collapses to V10 500 (TESS-side predicts 1 for all) |

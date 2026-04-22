@@ -148,7 +148,10 @@ Seven experiments on top of V10 λ=0.1. Full ablation table:
 | Exp 6 — diversity loss        | 82.9% | 80.5% | 86.8%  | 0.835 |
 | Exp 7 — V5+V10 best           | 82.9% | 83.8% | 81.6%  | 0.827 |
 | Exp 4 — V10 on 1114 Kepler   | 75.9% | 58.2% | 85.2%  | 0.692 |
+| Exp 4 — 1114 no weight (170) | 81.2% | 76.2% | 59.3%  | 0.667 |
+| Exp 4 — 1114 no weight (76)  | 69.7% | 89.5% | 44.7%  | 0.596 |
 | Exp 4 — 1114 → TESS (zero)   | 48.2% | 53.6% | 55.8%  | 0.547 |
+| Exp 4 — 1114 no wt → TESS    | 49.3% | 60.0% | 28.6%  | 0.388 |
 | Exp 4b — TESS native (degen) | 56.4% | 56.4% | 100%   | 0.721 |
 | Exp 4b — TESS→Kepler (degen) | 50.0% | 50.0% | 100%   | 0.667 |
 | Exp 4c — AND ensemble Kep 76 | 85.5% | 82.9% | 89.5%  | 0.861 |
@@ -185,6 +188,7 @@ Seven experiments on top of V10 λ=0.1. Full ablation table:
 - 0e25f09 Exp 4: V10 on 1114 TCEs → null (F1 0.692, precision collapse)
 - 3a2c16b Exp 4b: TESS-native V10 → null (degenerate always-planet)
 - 3707646 Exp 4c: cross-mission AND → null (equals best constituent)
+- caece6a Exp 4 no-weight: precision +18pp but recall halves, still null
 
 ### Exp 4 / 4b / 4c (scale-up + cross-mission) — null results
 - **Exp 4 — V10 on 1114 Kepler TCEs.** Class weighting pos_weight=2.18
@@ -199,6 +203,18 @@ Seven experiments on top of V10 λ=0.1. Full ablation table:
   1150-param architecture did not help. TESS 355 zero-shot from this
   model: F1 0.547 (vs Exp 3 V10-500's F1 0.889 on the 15-TCE hand-
   picked hot-Jupiter set — the 355 mix is a much harder distribution).
+- **Exp 4 no-weight — isolates pos_weight from data difficulty.** Same
+  1114 setup, plain `nn.BCELoss()`. Precision recovered to 76.2% on
+  the 170-TCE held-out (and 89.5% on the paper 76-TCE test set) — so
+  pos_weight was part of the problem. But recall halved: 85.2% →
+  59.3% on the 170 test, 44.7% on the 76 test. F1 still worse than
+  V10-500 (0.667 on 170, 0.596 on 76). TESS 355 zero-shot degrades
+  further (F1 0.388, recall 28.6%). Amplitudes also weaker than V10-
+  500 — A4 0.012 vs 0.021, A5 0.023 vs 0.025. **Verdict: the 1114-TCE
+  distribution is genuinely harder than the curated 500, and
+  pos_weight only slides the precision/recall tradeoff along a curve
+  that never reaches V10-500's F1.** Architecture scaling is needed
+  alongside the larger dataset.
 - **Exp 4b — TESS-native V10.** 355 TCEs (199 conf / 156 FP),
   pos_weight=0.784 (156/199), SNR defaulted to pivot=100 for every
   sample (no TESS SNR cache). Seed=42 split = 248/52/55. Val loss
@@ -648,6 +664,7 @@ Raw light curve
 - [x] V10 + 1114 TCEs scale-up — NULL, precision collapsed (Exp 4) ⚠
 - [x] V10 TESS-native — degenerate collapse (Exp 4b) ⚠
 - [x] V10 cross-mission AND ensemble — NULL, equals best single (Exp 4c) ⚠
+- [x] V10 + 1114 TCEs, no pos_weight — precision +18pp, recall halves ⚠
 - [ ] 3Blue1Brown — Neural Networks video 4
 - [ ] 3Blue1Brown — Transformers (chapters 5-7)
 - [ ] Vizuara — Foundations for ML

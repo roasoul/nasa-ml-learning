@@ -281,6 +281,28 @@ worse than Exp 3's V10-500 → TESS F1 0.889 on 15 hand-picked hot
 Jupiters, reflecting the harder 355-TCE TOI mix rather than a
 regression in the model.
 
+**Exp 4 no-weight — isolating pos_weight from data difficulty.**
+Re-ran Exp 4 with plain `nn.BCELoss()` (no class weighting) to
+separate the boundary-shift effect from the data-difficulty effect.
+Precision recovered strongly on both test sets — 76.2% on the
+170-TCE held-out (up from 58.2%) and 89.5% on the paper's 76-TCE
+test (higher than V10-500's 82.9%). But recall halved: 59.3% on
+170, 44.7% on 76 (vs V10-500's 89.5%). F1 is 0.667 / 0.596, both
+still below V10-500's 0.861. TESS 355 zero-shot drops to F1 0.388
+with recall 28.6%. Amplitudes are weaker than V10-500 too
+(A4 0.012 vs 0.021, A5 0.023 vs 0.025), consistent with a
+less-confident learned discriminator.
+
+**Verdict.** Neither endpoint of the `pos_weight ∈ {1.0, 2.18}`
+sweep clears V10-500's F1 — the weighted version trades
+precision for recall, the unweighted version trades recall for
+precision. The 1114-TCE subsample_evenly distribution is
+genuinely harder than the curated 500 (shallower FPs *and*
+noisier planet examples), and the 1150-parameter architecture
+cannot find a single boundary that clears 0.861 on the broader
+mix. Scaling the data requires scaling the architecture
+alongside it.
+
 **Exp 4b — V10 trained natively on TESS.** Collapsed to an
 always-positive classifier: TN=FN=0 on both the TESS 55-TCE test
 split and the Kepler 76-TCE test set (cross-mission TESS→Kepler
@@ -346,6 +368,7 @@ latest on `main`. Run:
     python -m src.data.build_dataset \
         --n-per-class 200 --mission TESS --output data/tess_tce_400.pt
     python scripts/run_v10_1114.py                # Exp 4  — F1 0.692
+    python scripts/run_v10_1114_noweight.py       # Exp 4 no-weight — F1 0.667
     python scripts/run_v10_tess.py                # Exp 4b — degenerate
     python scripts/run_v10_cross_ensemble.py      # Exp 4c — null
 
