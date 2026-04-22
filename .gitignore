@@ -42,3 +42,6 @@ Thumbs.db
 
 # Diagnostic images (generated, not source)
 notebooks/diagnostic_*.png
+
+# Paper build scratch (intermediates from scripts/build_paper_pdf.py)
+docs/paper/build/

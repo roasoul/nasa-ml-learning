@@ -42,6 +42,10 @@ obvious EBs. This was diagnosed in our V7 null results: the
 archive `koi_duration` for EB-flagged FPs has a nearly identical
 median obs/predicted ratio to confirmed planets (0.999 vs 0.957).
 
+![Figure 1 — Phase-aligned 4-channel input (primary, secondary, odd/even diff) for Kepler-6b and an EB false positive. The primary dip is visually similar between classes; discrimination requires the secondary and odd/even-diff channels.](../../notebooks/figures/diagnostic_phase_aligned.png){#fig:phase_aligned width=90%}
+
+![Figure 3 — Distribution of observed/predicted duration ratio from the Kepler pipeline for confirmed planets vs. `koi_fpflag_ss`-flagged false positives. The two distributions overlap heavily, showing why duration-based discriminators fail on this dataset.](../../notebooks/figures/duration_ratio_histogram.png){#fig:duration_ratio width=75%}
+
 **Taylor-gate family.** Near-transit dip morphology is well
 approximated by the first few terms of a cosine Taylor series,
 with a min-zero clamp enforcing the "baseline or dip" constraint:
@@ -58,6 +62,8 @@ B at five distinct values and learns only A_i per gate.
 
 Five parallel gates, each with a fixed dip morphology and its own
 learnable amplitude A_i ∈ [0.001, ∞):
+
+![Figure 2 — The five fixed gate templates (grey) overlaid with the primary flux of a planet (top, blue) and an FP (bottom, red), with Pearson r annotated. The per-sample signal the CNN uses is the set of correlations, not the templates themselves.](../../notebooks/figures/layer_activations.png){#fig:gates width=95%}
 
     G1 planet U-shape       y = min(0, -A1 · (1 - x²/2 + x⁴/24))
     G2 V-shape              y = min(0, -A2 · (1 - x²/2))
@@ -116,6 +122,10 @@ every run).
 
 See Figure 10. Numbers below.
 
+![Figure 4 — InvertedGeometryLoss λ sweep. F1 peaks at λ_max = 0.1; larger penalties override BCE and drag the decision boundary toward "always FP".](../../notebooks/figures/lambda_sweep.png){#fig:lambda_sweep width=75%}
+
+![Figure 10 — F1 across the V4→V10 ablation on the 76-TCE stratified test set.](../../notebooks/figures/ablation_f1.png){#fig:ablation_f1 width=85%}
+
 | Version                    | Prec   | Recall | F1     | Test-set | Notes |
 |----------------------------|-------:|-------:|-------:|---------:|-------|
 | V4                         | 66.7 % | 100 %  | 0.800  | 16-TCE   | hot-Jupiter subset only |
@@ -149,6 +159,12 @@ V8.5 (shape features fused into the classifier input) is bypassed
 by BCE. V9 (shape features penalised in the loss with the wrong
 sign) degrades F1 vs V6. See `docs/paper/v9_findings.md`.
 
+![Figure 5 — V7 hard-gate violation distribution: planet candidates cluster below the Kepler-Third-Law consistency threshold of 1.0, while K01091.01 (78-hour "transit") sits at violation 1.4 and is safely rejected.](../../notebooks/figures/violation_distribution.png){#fig:violation width=75%}
+
+![Figure 6 — Trapezoidal-fit diagnostic on K03745 (V7). Fitted ingress, flat-bottom, and egress parameters look plausible in isolation but do not separate the classes at the population level because the Kepler pipeline's Mandel-Agol model contaminates both.](../../notebooks/figures/trapezoid_fit_resolution_k03745.png){#fig:trapezoid width=75%}
+
+![Figure 7 — V9 per-sample B (quartic curvature) vs `koi_fpflag_ss` label using a bounded scipy fit on primary-flux only. Median separation 0.034 — primary-eclipse morphology alone cannot recover the SS flag.](../../notebooks/figures/B_vs_SS_flag_v2.png){#fig:B_vs_SS width=75%}
+
 ### 4.3 Why V10 works where V8/V8.5/V9 failed
 
 Not a single structural change, but three compounding fixes:
@@ -157,6 +173,8 @@ Not a single structural change, but three compounding fixes:
    give the CNN a reference dictionary. The per-sample signal
    is the *relative* match across templates, not any single
    match (Figure 8 — gate-vs-primary correlation heatmap).
+
+![Figure 8 — 76×5 gate-vs-primary Pearson correlation heatmap, with a V10-probability side panel. FPs show stronger correlations with every template (deeper dips); discrimination lives in the ratio the Conv1d layer learns.](../../notebooks/figures/v10_figure_8_gate_heatmap.png){#fig:gate_heatmap width=90%}
 2. **Shape features in loss only, not input.** V8.5 had them
    in the input and BCE routed around them. V10 keeps the loss
    pressure external to the classifier.
@@ -203,6 +221,8 @@ Malik et al. 2020 TESS zero-shot baseline of 63 % recall. Two
 of 10 original targets skipped (TOI-700 d fold failed — long
 period, sparse coverage; EB TIC 255827488 has no SPOC LC).
 
+![Figure 9 — TESS zero-shot comparison: V10 λ=0.1 (trained only on Kepler DR25) vs. published TESS-native baselines. Recall 100% vs. Malik et al. 63%, with no retraining.](../../notebooks/figures/tess_kepler_comparison.png){#fig:tess_kepler width=85%}
+
 ### 4.6 Stellar-radius normalisation (Experiment 5b)
 
 Motivated by the M-dwarf FN analysis. Goal: rescale each TCE's
@@ -228,6 +248,10 @@ V6b matches the V6b+V10 AND record at F1 = 0.872.
 ### 4.7 Ensemble results
 
 See Figure 11 (precision vs recall scatter).
+
+![Figure 11 — Precision vs recall for the ablation ladder on the 76-TCE test set. V6b + V10 AND lifts F1 to 0.872; triple OR @ 0.4 reaches 100 % recall at 66.7 % precision.](../../notebooks/figures/pr_curve.png){#fig:pr_curve width=80%}
+
+![Figure 13 — Scatter of every ensemble operating point tried in this session against F1 isocontours. The session-best V6b + V10 AND is starred; V6b + V10_curriculum AND traces the high-precision frontier as the curriculum threshold is swept.](../../notebooks/figures/pr_operating_points.png){#fig:pr_operating width=90%}
 
 - **V6b + V10 AND:** F1 0.872 — best single-shot F1 of any
   configuration. Combines V6b's recall with V10's precision.
@@ -326,6 +350,8 @@ tight local optimum. Scaling the Kepler data alone or moving to a
 different mission without also scaling the architecture and the
 training recipe breaks either calibration or convergence. The
 V6b + V10 AND ensemble remains the session's best F1.
+
+![Figure 12 — Precision-recall curves for V6b, V10 production, V10 log-R*, and V10 curriculum on the 76-TCE test set. Markers show the threshold-0.5 operating point of each model.](../../notebooks/figures/curriculum_pr_curve.png){#fig:curriculum_pr width=80%}
 
 ## 6. Future Work
 
