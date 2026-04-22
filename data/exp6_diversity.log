@@ -1,0 +1,18 @@
+Device: cuda
+Train: 350  Val: 74  Test: 76
+
+Training V10 + diversity (weight 0.1, lambda=0.1)
+    ep   1  val=0.6932  wait=0  A1=0.0084 A2=0.0105 A3=0.0104 A4=0.0108 A5=0.0096
+    ep  50  val=0.5147  wait=0  A1=0.0010 A2=0.0123 A3=0.0114 A4=0.0157 A5=0.0162
+    ep 100  val=0.4868  wait=3  A1=0.0010 A2=0.0115 A3=0.0098 A4=0.0185 A5=0.0197
+    ep 150  val=0.4701  wait=2  A1=0.0010 A2=0.0110 A3=0.0090 A4=0.0202 A5=0.0228
+    ep 200  val=0.4522  wait=5  A1=0.0010 A2=0.0111 A3=0.0090 A4=0.0217 A5=0.0246
+
+V10+diversity: acc=82.9%  prec=80.5%  rec=86.8%  F1=0.835  TP=33 FP=8 TN=30 FN=5
+Amplitudes: A1=0.0010 A2=0.0104 A3=0.0089 A4=0.0213 A5=0.0250
+
+Comparison:
+  V10 vanilla:     F1 0.861  A1=0.0010 A2=0.0105 A3=0.0086 A4=0.0209 A5=0.0245
+  V10 + diversity: F1 0.835  A1=0.0010 A2=0.0104 A3=0.0089 A4=0.0213 A5=0.0250
+
+Saved -> src/models/taylor_cnn_v10_diversity.pt
