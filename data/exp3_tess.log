@@ -1,0 +1,20 @@
+Warning: 30% (5873/19412) of the cadences will be ignored due to the quality mask (quality_bitmask=17087).
+TESS zero-shot inference with V10 lambda=0.1
+------------------------------------------------------------------------------------------
+  TOI-132 b            TIC 89020549       prob=0.928  pred=PLNT  truth=PLNT  [OK]
+  [SKIP] TOI-700 d            TIC 150428135      reason: ValueError: array of sample points is empty
+  TOI-824 b            TIC 193641523      prob=0.757  pred=PLNT  truth=PLNT  [OK]
+  TOI-1431 b           TIC 295541511      prob=0.877  pred=PLNT  truth=PLNT  [OK]
+  TOI-560 b            TIC 101955023      prob=0.596  pred=PLNT  truth=PLNT  [OK]
+  EB TIC 268766053     TIC 268766053      prob=0.317  pred=FP    truth=FP    [OK]
+  EB TIC 388104525     TIC 388104525      prob=0.082  pred=FP    truth=FP    [OK]
+  EB TIC 229804573     TIC 229804573      prob=0.000  pred=FP    truth=FP    [OK]
+  EB TIC 441765914     TIC 441765914      prob=0.762  pred=PLNT  truth=FP    [WRONG]
+  [SKIP] EB TIC 255827488     TIC 255827488      reason: RuntimeError: no SPOC LC for TIC 255827488
+
+Correct: 7  Wrong: 1  Skipped: 2
+TESS recall: 4/4 = 100.0%
+TESS FP rejection: 3/4 = 75.0%
+TESS precision: 80.0%
+Malik et al. reported 63% TESS zero-shot recall — comparison available
+Saved notebooks\figures\tess_kepler_comparison.png
