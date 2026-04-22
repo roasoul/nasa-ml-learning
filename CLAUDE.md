@@ -5,13 +5,13 @@ This is a personal ML/AI learning project. All code here is independent of my
 employer (MathWorks). I retain full IP ownership of everything in this repo.
 
 **Goal:** Build ML/AI skills targeting a NASA Force AI/ML or Data role.
-**Current phase:** V10 experimental round complete (6/7 main + 2
-deferred). New best: **V6b + V10 AND ensemble, F1 0.872** (prec 85.0%,
-rec 89.5%). V10 alone gets F1 0.861. **TESS zero-shot: 100% recall
-on 4 planets** (vs Malik et al. 63%). M-dwarf fix rescued K00254 but
-trashed precision — needs R* clipping. Diversity loss null. V5+V10
-ensemble null. Exp 4 (2000-TCE scale-up) deferred to next session
-due to 90-min download budget.
+**Current phase:** V10 + all experiments complete. Best single model
+V10 λ=0.1 F1=0.861. Best ensemble V6b+V10 AND F1=0.872. Triple-OR
+ensemble hits **100% recall** (38/38). TESS zero-shot 100% recall,
+80% precision. Exp 5b log-R* normalisation: F1 0.854 (rescues 2
+of 4 M-dwarf/radius-mismatch FNs, ties V6b+V10 AND in ensembles).
+Full paper draft at `docs/paper/paper_draft.md`. Exp 4 (2000-TCE
+scale-up) deferred — run background tomorrow.
 **Degree:** MS AI Engineering at Quantic (starting June 2025)
 
 ---
@@ -171,8 +171,15 @@ Seven experiments on top of V10 λ=0.1. Full ablation table:
 - 6cab651 M-dwarf R*² normalisation
 - 0839602 gate diversity loss → null
 - 598bde6 TESS zero-shot → 100% recall
+- 2f20d70 final report + Fig 8 + Fig 10
+- 3d5dacb Exp 5b clipped + log R* + triple OR 100% recall
 
-### V10 paper draft: `docs/paper/v10_findings.md`
+### Paper draft v1: `docs/paper/paper_draft.md`
+End-to-end write-up — abstract, method, ablation (V4→V10+ensembles),
+error analysis, TESS generalisation, stellar-R* normalisation,
+future work. Ready for external review.
+
+### V10 paper draft (prior): `docs/paper/v10_findings.md`
 Full write-up with ablation table (V4→V10), per-TCE V6 vs V10
 diagnostic identifying the 8 FPs V10 catches and the 2 planets it
 loses, Figure 8 (gate-vs-primary Pearson heatmap), and the
@@ -582,6 +589,10 @@ Raw light curve
 - [x] V10 M-dwarf R*² norm — rescues K00254 but trashes precision ⚠
 - [x] V10 diversity loss — A1 still collapses, F1 down ⚠
 - [x] V5 + V10 ensemble — V5 drags V10 down, no gain ⚠
+- [x] V10_5b clipped R* — F1 0.805, only K00912 rescued ⚠
+- [x] V10_5b log R* — F1 0.854, rescues K00912 + K00183 ✅
+- [x] Triple OR @ 0.4 — **100% recall (38/38)** ✅
+- [x] Paper draft v1 — `docs/paper/paper_draft.md` ✅
 - [ ] V10 + 2000 TCEs scale-up — deferred (~90 min download)
 - [ ] 3Blue1Brown — Neural Networks video 4
 - [ ] 3Blue1Brown — Transformers (chapters 5-7)
