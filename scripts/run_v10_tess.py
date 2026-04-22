@@ -1,3 +1,9 @@
+# ═══════════════════════════════════════════
+# PRODUCTION MODEL PROTECTION
+# NEVER save to src/models/production/
+# Save experiments to src/models/ only
+# with descriptive version suffix
+# ═══════════════════════════════════════════
 """Exp 4b — V10 trained natively on TESS (355 TCEs).
 
 Same V10 architecture and lambda as Exp 4 (see scripts/run_v10_1114.py)

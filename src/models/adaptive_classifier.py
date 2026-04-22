@@ -39,13 +39,14 @@ from src.models.taylor_cnn_v10 import TaylorCNNv10
 class AdaptivePINNClassifier:
     VALID_MODES = ("discovery", "balanced", "lightweight", "auto")
 
-    def __init__(self, model_dir: str = "src/models", device: str | torch.device | None = None):
+    PRODUCTION_DIR = "src/models/production"
+
+    def __init__(self, model_dir: str | None = None, device: str | torch.device | None = None):
         self.device = torch.device(device) if device is not None else torch.device("cpu")
-        self.v6b = self._load(TaylorCNN, os.path.join(model_dir, "taylor_cnn_v6.pt"))
-        self.v10 = self._load(TaylorCNNv10, os.path.join(model_dir, "taylor_cnn_v10.pt"))
-        self.v10_log = self._load(
-            TaylorCNNv10, os.path.join(model_dir, "taylor_cnn_v10_5b_log.pt")
-        )
+        model_dir = model_dir or self.PRODUCTION_DIR
+        self.v6b = self._load(TaylorCNN, os.path.join(model_dir, "v6b_recall947.pt"))
+        self.v10 = self._load(TaylorCNNv10, os.path.join(model_dir, "v10_f1861.pt"))
+        self.v10_log = self._load(TaylorCNNv10, os.path.join(model_dir, "v10_log_mdwarf.pt"))
 
     def _load(self, cls, path: str):
         blob = torch.load(path, weights_only=False, map_location=self.device)

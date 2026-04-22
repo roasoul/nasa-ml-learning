@@ -1,3 +1,9 @@
+# ═══════════════════════════════════════════
+# PRODUCTION MODEL PROTECTION
+# NEVER save to src/models/production/
+# Save experiments to src/models/ only
+# with descriptive version suffix
+# ═══════════════════════════════════════════
 """V10 training — 5-gate bank + InvertedGeometryLoss lambda sweep.
 
 Sweep:   lambda_max ∈ {0.1, 0.5, 1.0}

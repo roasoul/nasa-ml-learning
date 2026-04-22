@@ -1,3 +1,9 @@
+# ═══════════════════════════════════════════
+# PRODUCTION MODEL PROTECTION
+# NEVER save to src/models/production/
+# Save experiments to src/models/ only
+# with descriptive version suffix
+# ═══════════════════════════════════════════
 """Exp 4 — V10 retrained on the 1114-TCE Kepler dataset.
 
 Pipeline is identical to scripts/run_v10.py at the winning lambda_max=0.1,

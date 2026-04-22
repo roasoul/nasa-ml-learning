@@ -8,6 +8,9 @@ data/raw/
 # Model weights (too large for GitHub, regenerated via training notebooks)
 *.pt
 
+# Production models are small and MUST ship — they are the paper artefacts
+!src/models/production/*.pt
+
 # But DO track the source code that generates them
 !src/**/*.py
 

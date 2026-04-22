@@ -1,3 +1,9 @@
+# ═══════════════════════════════════════════
+# PRODUCTION MODEL PROTECTION
+# NEVER save to src/models/production/
+# Save experiments to src/models/ only
+# with descriptive version suffix
+# ═══════════════════════════════════════════
 """Exp 4 follow-up — V10 on 1114 Kepler TCEs WITHOUT pos_weight.
 
 Isolates the boundary-shift hypothesis from Exp 4. Architecture, split

@@ -546,6 +546,37 @@ form, v2 scipy bounded), V8 gradcheck analysis, and V10 direction.
 - Never use MathWorks work resources or IP
 - Always activate nasaml venv before running anything
 
+## PRODUCTION MODEL PROTECTION
+
+NEVER overwrite files in `src/models/production/`.
+These are the published paper models.
+
+Production models (READ-ONLY):
+  v6b_recall947.pt   → V6 Config B (94.7% recall)
+  v10_f1861.pt       → V10 λ=0.1 (F1=0.861, best single)
+  v10_log_mdwarf.pt  → V10 log R* normalization
+  v75_safe_gate.pt   → V7.5 safe Kepler gate
+  v5_baseline.pt     → V5 secondary eclipse baseline
+
+`AdaptivePINNClassifier` loads from this directory by default.
+
+Experiment naming convention — write NEW models to `src/models/`
+(never `src/models/production/`) with a descriptive version suffix:
+  taylor_cnn_v10_[description]_[date].pt
+  Examples:
+    taylor_cnn_v10_1114_noweight.pt
+    taylor_cnn_v10_tess_native.pt
+    taylor_cnn_v10_wider_cnn.pt
+
+Training scripts should carry the protection banner at the top:
+
+    # ═══════════════════════════════════════════
+    # PRODUCTION MODEL PROTECTION
+    # NEVER save to src/models/production/
+    # Save experiments to src/models/ only
+    # with descriptive version suffix
+    # ═══════════════════════════════════════════
+
 ---
 
 ## Active Projects
