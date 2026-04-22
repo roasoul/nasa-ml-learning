@@ -1,0 +1,37 @@
+Loaded 76 test TCEs (conf=38, FP=38)
+
+================================================================
+Per-mode evaluation on 76-TCE paper test set
+================================================================
+Mode              Prec   Recall      F1   TP   FP   TN   FN
+----------------------------------------------------------------
+discovery       66.7%   100.0%   0.800   38   19   19    0
+balanced        85.0%    89.5%   0.872   34    6   32    4
+lightweight     82.9%    89.5%   0.861   34    7   31    4
+auto            82.9%    89.5%   0.861   34    7   31    4
+
+Auto routing histogram (n=76): discovery=1  lightweight=24  balanced=51
+
+================================================================
+Showcase: predict_with_report()
+================================================================
+
+K00254.01  (true label: PLANET):
+  prediction        : FP
+  mode_used         : balanced
+  snr               : 1341.5999755859375
+  stellar_radius    : 0.5680000185966492
+  p_v6b             : 0.228
+  p_v10             : 0.228
+  p_log             : 0.43
+  confidence        : 0.43
+
+K01091.01  (true label: FP):
+  prediction        : FP
+  mode_used         : lightweight
+  snr               : 56.0
+  stellar_radius    : 1.0859999656677246
+  p_v6b             : 0.138
+  p_v10             : 0.207
+  p_log             : 0.494
+  confidence        : 0.494
