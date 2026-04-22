@@ -1,0 +1,37 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: Kapali
+    given-names: Srikanth
+    affiliation: Independent Researcher
+title: "Taylor-CNN: Physics-Informed Transit Classification with a Multi-Template Gate Bank"
+version: 1.0.0
+date-released: 2026-04-22
+url: "https://github.com/roasoul/nasa-ml-learning"
+doi: 10.5281/zenodo.15696691
+license: CC-BY-4.0
+abstract: >
+  Taylor-CNN is a physics-informed 1D CNN for exoplanet
+  transit classification on phase-folded light curves.
+  The model uses a bank of five fixed-morphology Taylor
+  gates with learnable amplitudes. Achieves F1=0.872
+  with 1150 parameters and 100% TESS recall zero-shot.
+keywords:
+  - exoplanets
+  - transit detection
+  - physics-informed neural networks
+  - machine learning
+  - Kepler
+  - TESS
+  - convolutional neural networks
+preferred-citation:
+  type: article
+  authors:
+    - family-names: Kapali
+      given-names: Srikanth
+      affiliation: Independent Researcher
+  title: "Taylor-CNN: Physics-Informed Transit Classification with a Multi-Template Gate Bank"
+  year: 2026
+  doi: 10.5281/zenodo.15696691
+  url: "https://doi.org/10.5281/zenodo.15696691"
+  notes: "Zenodo preprint"
