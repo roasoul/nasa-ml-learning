@@ -1,0 +1,9 @@
+V6 Config B vs V10 lambda=0.1 — ensemble strategies
+------------------------------------------------------------------------------------------
+  V6 Config B alone (thr=0.5)              acc=78.9%  prec=72.0%  rec=94.7%  F1= 0.818  TP=36 FP=14 TN=24 FN=2  
+  V10 alone (thr=0.5)                      acc=85.5%  prec=82.9%  rec=89.5%  F1= 0.861  TP=34 FP=7 TN=31 FN=4  
+
+  1. avg (thr=0.5)                         acc=81.6%  prec=76.1%  rec=92.1%  F1= 0.833  TP=35 FP=11 TN=27 FN=3  
+  2. weighted 0.4*v6 + 0.6*v10 (thr=0.5)   acc=84.2%  prec=79.5%  rec=92.1%  F1= 0.854  TP=35 FP=9 TN=29 FN=3  
+  3. OR (v6>0.4 or v10>0.4)                acc=76.3%  prec=68.5%  rec=97.4%  F1= 0.804  TP=37 FP=17 TN=21 FN=1  
+  4. AND (v6>0.5 and v10>0.5)              acc=86.8%  prec=85.0%  rec=89.5%  F1= 0.872  TP=34 FP=6 TN=32 FN=4  
