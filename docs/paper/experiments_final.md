@@ -1,7 +1,10 @@
 # Experimental Round after V10 — Summary
 
-Seven experiments on top of the V10 λ=0.1 winning model. One
-deferred.
+Ten experiments on top of the V10 λ=0.1 winning model (Exp 1–7 in
+the original round, plus Exp 4/4b/4c run after the 1114-TCE Kepler
+and 355-TCE TESS datasets were finished). All three newly-run scale-
+up and cross-mission experiments returned null results — V6b + V10
+AND (F1 0.872) remains session best.
 
 ## Final ablation table (76-TCE seed=42 test set)
 
@@ -21,7 +24,12 @@ deferred.
 | Exp 6 — V10 + diversity loss 0.1  | 82.9% | 80.5% | 86.8%  | 0.835 | A1 still collapses |
 | Exp 7 — V5 + V10 ensembles        | 63-83%| 58-84%| 82-95% | 0.72–0.83 | all below V10 alone |
 | Exp 3 — TESS zero-shot (8 TCEs)   | 87.5% | 80.0% |100.0%  | 0.889 | **beats Malik et al. 63% recall** |
-| Exp 4 — 2000-TCE rebuild          |   —   |   —   |   —    |   —   | **DEFERRED** — ~75–125 min of downloads |
+| Exp 4 — V10 retrained on 1114 Kepler | 75.9% | 58.2% | 85.2%  | 0.692 | 170-TCE held-out, pos_weight 2.18 — precision collapses |
+| Exp 4 — V10 1114 → TESS 355 (zero)    | 48.2% | 53.6% | 55.8%  | 0.547 | full 355-TCE TOI mix, much harder than Exp 3's 15 |
+| Exp 4b — V10 TESS-native              | 56.4% | 56.4% | 100.0% | 0.721 | **degenerate** — always-planet, TN=FN=0 |
+| Exp 4b — V10 TESS-native → Kepler 76 | 50.0% | 50.0% | 100.0% | 0.667 | **degenerate** — always-planet |
+| Exp 4c — AND ensemble (Kepler 76)     | 85.5% | 82.9% | 89.5%  | 0.861 | collapses to V10 500 (TESS-side predicts 1 for all) |
+| Exp 4c — AND ensemble (TESS 55)       | 54.5% | 57.9% | 71.0%  | 0.638 | collapses to V10 1114 zero-shot |
 
 ### Best-in-session: **V6b + V10 AND ensemble, F1 0.872.**
 

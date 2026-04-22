@@ -1,0 +1,28 @@
+Device: cuda
+TESS 355 — Train: 248  Val: 52  Test: 55
+  pos_weight (FP/confirmed) = 0.784
+
+================================================================
+Training V10 lambda=0.1 on TESS 355, pos_weight=0.784
+================================================================
+  ep   1  bce=0.6103  geo=0.0495  val=0.6096  wait=0  A1=0.0085 A2=0.0103 A3=0.0106 A4=0.0107 A5=0.0094
+  ep  25  bce=0.6053  geo=0.0310  val=0.6102  wait=24  A1=0.0010 A2=0.0100 A3=0.0107 A4=0.0118 A5=0.0101
+  early stop at ep 26
+
+TESS native test (n=55):
+  acc=56.4%  prec=56.4%  rec=100.0%  F1=0.721  TP=31 FP=24 TN=0 FN=0
+  Amplitudes  A1=0.0085 A2=0.0103 A3=0.0106 A4=0.0107 A5=0.0094
+
+Kepler 76-TCE zero-shot (from data/kepler_tce_v6.pt):
+  acc=50.0%  prec=50.0%  rec=100.0%  F1=0.667  TP=38 FP=38 TN=0 FN=0
+
+========================================================================
+Version                   Prec   Recall      F1  test_n
+------------------------------------------------------------------------
+Kepler -> TESS (Exp 3)   80.0%   100.0%   0.889      15
+TESS native             56.4%  100.0%   0.721      55
+V10 500 native (Kep)     82.9%    89.5%   0.861      76
+TESS -> Kepler          50.0%  100.0%   0.667      76
+
+Saved native model -> src/models/taylor_cnn_v10_tess.pt
+Saved results     -> data/v10_tess_results.pt

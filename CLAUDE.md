@@ -10,8 +10,11 @@ V10 λ=0.1 F1=0.861. Best ensemble V6b+V10 AND F1=0.872. Triple-OR
 ensemble hits **100% recall** (38/38). TESS zero-shot 100% recall,
 80% precision. Exp 5b log-R* normalisation: F1 0.854 (rescues 2
 of 4 M-dwarf/radius-mismatch FNs, ties V6b+V10 AND in ensembles).
-Full paper draft at `docs/paper/paper_draft.md`. Exp 4 (2000-TCE
-scale-up) deferred — run background tomorrow.
+Full paper draft at `docs/paper/paper_draft.md`. Exp 4/4b/4c run to
+completion: Kepler 1114-TCE scale-up hurt precision (F1 0.692),
+TESS-native collapsed to always-positive (F1 0.721 but TN=FN=0), and
+the cross-mission AND ensemble reproduces the non-degenerate constituent
+— no gain over V10 500-TCE F1 0.861 / V6b+V10 AND F1 0.872.
 **Degree:** MS AI Engineering at Quantic (starting June 2025)
 
 ---
@@ -144,7 +147,12 @@ Seven experiments on top of V10 λ=0.1. Full ablation table:
 | Exp 5 — R*² norm              | 53.9% | 52.1% | 100%   | 0.685 |
 | Exp 6 — diversity loss        | 82.9% | 80.5% | 86.8%  | 0.835 |
 | Exp 7 — V5+V10 best           | 82.9% | 83.8% | 81.6%  | 0.827 |
-| Exp 4 — 2000 TCEs (DEFERRED)  |   —   |   —   |   —    |   —   |
+| Exp 4 — V10 on 1114 Kepler   | 75.9% | 58.2% | 85.2%  | 0.692 |
+| Exp 4 — 1114 → TESS (zero)   | 48.2% | 53.6% | 55.8%  | 0.547 |
+| Exp 4b — TESS native (degen) | 56.4% | 56.4% | 100%   | 0.721 |
+| Exp 4b — TESS→Kepler (degen) | 50.0% | 50.0% | 100%   | 0.667 |
+| Exp 4c — AND ensemble Kep 76 | 85.5% | 82.9% | 89.5%  | 0.861 |
+| Exp 4c — AND ensemble TESS55 | 54.5% | 57.9% | 71.0%  | 0.638 |
 
 **Key new findings:**
 - **V6b+V10 AND ensemble is the new session best.** Precision
@@ -173,6 +181,50 @@ Seven experiments on top of V10 λ=0.1. Full ablation table:
 - 598bde6 TESS zero-shot → 100% recall
 - 2f20d70 final report + Fig 8 + Fig 10
 - 3d5dacb Exp 5b clipped + log R* + triple OR 100% recall
+- 1d0cb13 build_dataset: --resume, --mission TESS, class imbalance log
+- 0e25f09 Exp 4: V10 on 1114 TCEs → null (F1 0.692, precision collapse)
+- 3a2c16b Exp 4b: TESS-native V10 → null (degenerate always-planet)
+- 3707646 Exp 4c: cross-mission AND → null (equals best constituent)
+
+### Exp 4 / 4b / 4c (scale-up + cross-mission) — null results
+- **Exp 4 — V10 on 1114 Kepler TCEs.** Class weighting pos_weight=2.18
+  (764/350) applied as weighted BCE on the sigmoid head. Seed=42
+  stratified 70/15/15 = 778/166/170 split. Early stop at ep 154.
+  Kepler held-out: acc 75.9%, **prec 58.2%**, rec 85.2%, F1 0.692
+  (vs V10 500's 0.861). Precision drop = 24.7pp; recall drop = 4.3pp.
+  Amplitude pattern matches V10 500 (A1 at 0.001 floor, A4=0.022 and
+  A5=0.027 dominant). The larger training set + shallow-FP tail from
+  subsample_evenly across 9564 KOIs + boundary shift from pos_weight
+  combined to drag precision. Scaling data without scaling the
+  1150-param architecture did not help. TESS 355 zero-shot from this
+  model: F1 0.547 (vs Exp 3 V10-500's F1 0.889 on the 15-TCE hand-
+  picked hot-Jupiter set — the 355 mix is a much harder distribution).
+- **Exp 4b — TESS-native V10.** 355 TCEs (199 conf / 156 FP),
+  pos_weight=0.784 (156/199), SNR defaulted to pivot=100 for every
+  sample (no TESS SNR cache). Seed=42 split = 248/52/55. Val loss
+  plateaued at 0.61 after ep 1, gate amplitudes barely moved from
+  init (A1..A5 ≈ 0.01 vs init 0.01). Model collapsed to always-
+  planet (TN=0, FN=0 on both TESS test split and Kepler 76-TCE
+  zero-shot). Degenerate F1 0.721 TESS-native, 0.667 TESS→Kepler
+  — not a real F1. Fix candidates: longer patience, LR warmup,
+  real SNR cache, stronger class weighting.
+- **Exp 4c — cross-mission AND ensemble.** Because TESS-native
+  predicts 1 for every sample, `(p_TESS > 0.5) AND (p_other > 0.5)`
+  reduces to `p_other > 0.5`. On Kepler 76 the AND F1 is identically
+  V10 500's 0.861; on TESS 55 the AND F1 is identically V10 1114's
+  zero-shot 0.638. No gain — V6b+V10 AND F1 0.872 remains session best.
+
+### Data infrastructure — build_dataset.py (now multi-mission)
+`src/data/build_dataset.py` supports: `--mission Kepler|TESS`, `--resume
+path.pt` (skips already-downloaded TCEs by name, appends new ones), `--seed`,
+and always prints the class-balance report + recommended `pos_weight`
+(use with `nn.BCEWithLogitsLoss(pos_weight=torch.tensor(...))`). TESS fetch
+uses the TAP `toi` table (no `st_mass` column — defaulted to 1.0) and
+converts BJD→BTJD (−2457000) to align with SPOC `lightkurve.time`.
+Datasets now on disk:
+- `data/kepler_tce_2000.pt` — 1114 TCEs (350/764), pos_weight 2.183
+- `data/tess_tce_400.pt` — 355 TCEs (199/156), pos_weight 0.784 (45 of
+  400 targets dropped because MAST has no SPOC 2-min data for those TICs)
 
 ### Paper draft v1: `docs/paper/paper_draft.md`
 End-to-end write-up — abstract, method, ablation (V4→V10+ensembles),
@@ -593,7 +645,9 @@ Raw light curve
 - [x] V10_5b log R* — F1 0.854, rescues K00912 + K00183 ✅
 - [x] Triple OR @ 0.4 — **100% recall (38/38)** ✅
 - [x] Paper draft v1 — `docs/paper/paper_draft.md` ✅
-- [ ] V10 + 2000 TCEs scale-up — deferred (~90 min download)
+- [x] V10 + 1114 TCEs scale-up — NULL, precision collapsed (Exp 4) ⚠
+- [x] V10 TESS-native — degenerate collapse (Exp 4b) ⚠
+- [x] V10 cross-mission AND ensemble — NULL, equals best single (Exp 4c) ⚠
 - [ ] 3Blue1Brown — Neural Networks video 4
 - [ ] 3Blue1Brown — Transformers (chapters 5-7)
 - [ ] Vizuara — Foundations for ML

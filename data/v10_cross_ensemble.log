@@ -1,0 +1,24 @@
+Device: cuda
+Loading models...
+
+============================================================================
+Kepler 76-TCE test set (V10 paper baseline split)
+============================================================================
+  V10 500 (Kepler native)     : acc=85.5%  prec=82.9%  rec=89.5%  F1=0.861  TP=34 FP=7 TN=31 FN=4
+  V10 TESS-native (zero-shot) : acc=50.0%  prec=50.0%  rec=100.0%  F1=0.667  TP=38 FP=38 TN=0 FN=0
+  AND ensemble                : acc=85.5%  prec=82.9%  rec=89.5%  F1=0.861  TP=34 FP=7 TN=31 FN=4
+
+============================================================================
+TESS test split (seed=42 on tess_tce_400.pt)
+============================================================================
+  V10 1114 (Kepler, zero-shot): acc=54.5%  prec=57.9%  rec=71.0%  F1=0.638  TP=22 FP=16 TN=8 FN=9
+  V10 TESS-native             : acc=56.4%  prec=56.4%  rec=100.0%  F1=0.721  TP=31 FP=24 TN=0 FN=0
+  AND ensemble                : acc=54.5%  prec=57.9%  rec=71.0%  F1=0.638  TP=22 FP=16 TN=8 FN=9
+
+============================================================================
+Summary: does cross-mission AND beat the best constituent?
+============================================================================
+  Kepler-76     best-single F1=0.861  ens F1=0.861  delta=+0.000  |  max-single prec=82.9%  ens prec=82.9%
+  TESS-split    best-single F1=0.721  ens F1=0.638  delta=-0.083  |  max-single prec=57.9%  ens prec=57.9%
+
+Saved cross-ensemble results -> data/v10_cross_ensemble_results.pt

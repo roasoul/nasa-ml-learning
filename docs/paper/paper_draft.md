@@ -255,12 +255,63 @@ sidesteps it. Consistent with that interpretation: A1 (the planet
 template) is *unused* in every V10 run. The discriminator
 recognises FP signatures rather than planet signatures.
 
+## 5.5 Scale-up and cross-mission retraining (null results)
+
+We added a scaled-up Kepler dataset (1114 TCEs via subsampling
+`koi_disposition in ('CONFIRMED', 'FALSE POSITIVE')` evenly across
+the depth-sorted archive) and a native TESS dataset (355 TOIs, SPOC
+2-min cadence — 45 of a target 400 were dropped because MAST has no
+2-min postage stamps for those TICs). `pos_weight = n_FP / n_CONF`
+was applied as a per-sample weight on the sigmoid-output BCE so the
+V10 head is unchanged. Seeds and splits (seed=42 stratified 70/15/15)
+match the earlier experiments.
+
+**Exp 4 — V10 retrained on 1114 Kepler TCEs.** Held-out 170-TCE
+test: prec 58.2%, rec 85.2%, F1 0.692 (vs V10-500's F1 0.861).
+Precision dropped 24.7 percentage points; recall held within 5 pp.
+Amplitude profile is identical to V10-500 (A1 pinned at the 0.001
+floor, A4=0.022 and A5=0.027 dominant), so the architecture's
+learned solution did not change — only its calibration did. The
+1.3-million-KOI-wide depth subsampling pulls in shallower, noisier
+FPs, and `pos_weight=2.18` moves the threshold toward "planet".
+At 1150 trainable parameters the model is not expressive enough to
+absorb the extra diversity without over-firing on ambiguous FPs.
+TESS 355-zero-shot from the 1114-TCE model: F1 0.547 — notably
+worse than Exp 3's V10-500 → TESS F1 0.889 on 15 hand-picked hot
+Jupiters, reflecting the harder 355-TCE TOI mix rather than a
+regression in the model.
+
+**Exp 4b — V10 trained natively on TESS.** Collapsed to an
+always-positive classifier: TN=FN=0 on both the TESS 55-TCE test
+split and the Kepler 76-TCE test set (cross-mission TESS→Kepler
+zero-shot). Val loss plateaued at 0.61 after epoch 1; amplitudes
+stayed within 0.001 of their 0.01 init. The 248-sample training
+set, the mild 56/44 class imbalance, and the absence of a TESS
+SNR cache (which left the InvertedGeometryLoss at mid-strength for
+every sample) together provided insufficient gradient signal to
+escape the "predict 1 everywhere" local minimum. A real F1 for
+TESS-native training will need longer patience, LR warmup, or a
+per-target TESS SNR cache.
+
+**Exp 4c — cross-mission AND ensemble.** Because the TESS-native
+model votes 1 on every sample, `AND` reduces to the other model's
+prediction: Kepler-76 AND = V10-500's exact result (F1 0.861), TESS-55
+AND = V10-1114 zero-shot's exact result (F1 0.638). No gain over
+the existing V6b + V10 AND ensemble (F1 0.872).
+
+**Interpretation.** The 500-TCE V10 baseline is a surprisingly
+tight local optimum. Scaling the Kepler data alone or moving to a
+different mission without also scaling the architecture and the
+training recipe breaks either calibration or convergence. The
+V6b + V10 AND ensemble remains the session's best F1.
+
 ## 6. Future Work
 
-- **Scale to 2000 TCEs (Exp 4, deferred).** Current 500-TCE
-  training + 76-TCE test was ambitious for the amount of signal
-  available; +3–5 % precision and recall expected with more
-  data, plus a more representative FP mix.
+- **Scale architecture alongside data.** The 1150-parameter V10
+  held its learned geometry on 1114 TCEs but miscalibrated;
+  next step is a wider CNN (32→64 filters) plus the MLP head
+  below, retrained on the 1114-TCE set with a longer schedule
+  and a per-TCE SNR cache.
 - **M-dwarf handling.** Log-R* helps but doesn't close the gap.
   Future work: per-class stellar prior, or explicit planet
   radius in Earth/Jupiter units as an auxiliary input.
@@ -286,8 +337,16 @@ Full code + data pipeline in
 latest on `main`. Run:
 
     python -m src.data.build_dataset --n-per-class 250
-    python scripts/run_v10.py                # reproduces F1 0.861
-    python scripts/exp2_v6b_v10_ensemble.py  # reproduces F1 0.872
-    python scripts/exp3_tess_zeroshot.py     # reproduces TESS 100% recall
+    python scripts/run_v10.py                     # reproduces F1 0.861
+    python scripts/exp2_v6b_v10_ensemble.py       # reproduces F1 0.872
+    python scripts/exp3_tess_zeroshot.py          # reproduces TESS 100% recall
+    # Exp 4 / 4b / 4c — scale-up and cross-mission (null results)
+    python -m src.data.build_dataset \
+        --n-per-class 1000 --output data/kepler_tce_2000.pt
+    python -m src.data.build_dataset \
+        --n-per-class 200 --mission TESS --output data/tess_tce_400.pt
+    python scripts/run_v10_1114.py                # Exp 4  — F1 0.692
+    python scripts/run_v10_tess.py                # Exp 4b — degenerate
+    python scripts/run_v10_cross_ensemble.py      # Exp 4c — null
 
 All figures in `notebooks/figures/`.
