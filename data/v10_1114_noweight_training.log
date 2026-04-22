@@ -1,0 +1,46 @@
+Device: cuda
+Kepler 1114 — Train: 778  Val: 166  Test: 170
+  Loss: nn.BCELoss() (no pos_weight)
+  SNR median: 152.4  |  pivot: 100.0  |  below-pivot: 389/1114
+
+================================================================
+Training V10 lambda=0.1 on Kepler 1114, NO pos_weight
+================================================================
+  ep   1  bce=0.6540  geo=0.0648  val=0.6635  wait=0  A1=0.0057 A2=0.0122 A3=0.0120 A4=0.0105 A5=0.0131
+  ep  25  bce=0.5170  geo=0.0015  val=0.5044  wait=1  A1=0.0010 A2=0.0024 A3=0.0048 A4=0.0023 A5=0.0097
+  ep  50  bce=0.4885  geo=0.0016  val=0.4826  wait=0  A1=0.0010 A2=0.0012 A3=0.0052 A4=0.0039 A5=0.0127
+  ep  75  bce=0.4814  geo=0.0031  val=0.4757  wait=1  A1=0.0010 A2=0.0010 A3=0.0062 A4=0.0049 A5=0.0139
+  ep 100  bce=0.4654  geo=0.0032  val=0.4567  wait=0  A1=0.0010 A2=0.0013 A3=0.0065 A4=0.0063 A5=0.0163
+  ep 125  bce=0.4552  geo=0.0057  val=0.4475  wait=0  A1=0.0010 A2=0.0010 A3=0.0072 A4=0.0078 A5=0.0190
+  ep 150  bce=0.4583  geo=0.0046  val=0.4464  wait=12  A1=0.0010 A2=0.0014 A3=0.0081 A4=0.0094 A5=0.0208
+  ep 175  bce=0.4412  geo=0.0045  val=0.4386  wait=8  A1=0.0010 A2=0.0010 A3=0.0087 A4=0.0109 A5=0.0220
+  ep 200  bce=0.4331  geo=0.0046  val=0.4423  wait=11  A1=0.0010 A2=0.0015 A3=0.0087 A4=0.0130 A5=0.0241
+
+Kepler 1114 held-out (n=170):
+  acc=81.2%  prec=76.2%  rec=59.3%  F1=0.667  TP=32 FP=10 TN=106 FN=22
+  Amplitudes  A1=0.0010 A2=0.0016 A3=0.0091 A4=0.0123 A5=0.0234
+
+Paper 76-TCE test set (n=76):
+  acc=69.7%  prec=89.5%  rec=44.7%  F1=0.596  TP=17 FP=2 TN=36 FN=21
+
+TESS 355 zero-shot:
+  acc=49.3%  prec=60.0%  rec=28.6%  F1=0.388  TP=57 FP=38 TN=118 FN=142
+
+==========================================================================
+Version                     Prec   Recall      F1  test_n
+--------------------------------------------------------------------------
+V10 500-TCE baseline       82.9%    89.5%   0.861      76
+V10 1114 + pos_weight      58.2%    85.2%   0.692     170
+V10 1114 no pos_weight    76.2%   59.3%   0.667     170
+  (same model, 76-test)   89.5%   44.7%   0.596      76
+Kepler -> TESS (Exp 3)     80.0%   100.0%   0.889      15
+1114 + pos_weight -> TESS   53.6%    55.8%   0.547     355
+1114 no weight -> TESS    60.0%   28.6%   0.388     355
+
+Verdicts:
+  Kepler 1114 precision  -> 76.2%  [pos_weight was the culprit]
+  Paper 76-TCE F1        -> 0.596  [below V10-500 baseline]
+  TESS 355 recall        -> 28.6%  [TESS recall still weak]
+
+Saved model   -> src/models/taylor_cnn_v10_1114_noweight.pt
+Saved results -> data/v10_1114_noweight_results.pt
