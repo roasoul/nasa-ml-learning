@@ -1,0 +1,27 @@
+Device: cuda
+
+============================================================
+Exp 5b mode=clipped
+============================================================
+[clipped] R* raw: min=0.118  max=35.695  median=0.903
+[clipped] clipped count: below 0.5 Rsun: 30, above 2.0 Rsun: 52
+[clipped] scale: min=0.250  max=4.000  ratio=16.0x
+Trainable params: 1150
+    ep   1  val=0.6932  wait=0  A1=0.0082 A5=0.0095
+    ep  50  val=0.5433  wait=0  A1=0.0010 A5=0.0169
+    ep 100  val=0.5053  wait=1  A1=0.0010 A5=0.0216
+    ep 150  val=0.4832  wait=6  A1=0.0010 A5=0.0263
+    early stop at ep 178
+
+[clipped] V10+clippedR*: acc=80.3%  prec=79.5%  rec=81.6%  F1=0.805  TP=31 FP=8 TN=30 FN=7
+
+[clipped] Per-TCE for previously-missed planets:
+  K00013.01    R*=3.03  prob=0.263 -> FP
+  K00912.01    R*=0.59  prob=0.775 -> PLNT
+  K00254.01    R*=0.57  prob=0.498 -> FP
+  K00183.01    R*=0.96  prob=0.447 -> FP
+Saved -> src/models/taylor_cnn_v10_5b_clipped.pt
+
+Clipped mode hit F1 >= 0.80 — skipping log fallback.
+
+Winner: clipped  saved to src/models/taylor_cnn_v10_5b.pt

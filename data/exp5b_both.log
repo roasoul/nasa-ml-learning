@@ -1,0 +1,49 @@
+Device: cuda
+
+============================================================
+Exp 5b mode=clipped
+============================================================
+[clipped] R* raw: min=0.118  max=35.695  median=0.903
+[clipped] clipped count: below 0.5 Rsun: 30, above 2.0 Rsun: 52
+[clipped] scale: min=0.250  max=4.000  ratio=16.0x
+Trainable params: 1150
+    ep   1  val=0.6932  wait=0  A1=0.0082 A5=0.0095
+    ep  50  val=0.5432  wait=0  A1=0.0010 A5=0.0169
+    ep 100  val=0.5056  wait=1  A1=0.0010 A5=0.0216
+    ep 150  val=0.4835  wait=6  A1=0.0010 A5=0.0263
+    early stop at ep 178
+
+[clipped] V10+clippedR*: acc=80.3%  prec=79.5%  rec=81.6%  F1=0.805  TP=31 FP=8 TN=30 FN=7
+
+[clipped] Per-TCE for previously-missed planets:
+  K00013.01    R*=3.03  prob=0.262 -> FP
+  K00912.01    R*=0.59  prob=0.774 -> PLNT
+  K00254.01    R*=0.57  prob=0.497 -> FP
+  K00183.01    R*=0.96  prob=0.446 -> FP
+Saved -> src/models/taylor_cnn_v10_5b_clipped.pt
+
+Running log variant for comparison...
+
+============================================================
+Exp 5b mode=log
+============================================================
+[log] R* raw: min=0.118  max=35.695  median=0.903
+[log] clipped count: below 0.5 Rsun: 30, above 2.0 Rsun: 52
+[log] scale: min=0.112  max=3.603  ratio=32.3x
+Trainable params: 1150
+    ep   1  val=0.6932  wait=0  A1=0.0083 A5=0.0096
+    ep  50  val=0.5164  wait=0  A1=0.0010 A5=0.0156
+    ep 100  val=0.4884  wait=1  A1=0.0010 A5=0.0173
+    ep 150  val=0.4634  wait=2  A1=0.0010 A5=0.0204
+    ep 200  val=0.4330  wait=1  A1=0.0010 A5=0.0209
+
+[log] V10+logR*: acc=84.2%  prec=79.5%  rec=92.1%  F1=0.854  TP=35 FP=9 TN=29 FN=3
+
+[log] Per-TCE for previously-missed planets:
+  K00013.01    R*=3.03  prob=0.239 -> FP
+  K00912.01    R*=0.59  prob=0.612 -> PLNT
+  K00254.01    R*=0.57  prob=0.430 -> FP
+  K00183.01    R*=0.96  prob=0.523 -> PLNT
+Saved -> src/models/taylor_cnn_v10_5b_log.pt
+
+Winner: log  saved to src/models/taylor_cnn_v10_5b.pt

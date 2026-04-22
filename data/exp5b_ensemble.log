@@ -1,0 +1,12 @@
+Ensemble variants — V6b, V10, V10_5b (log R*)
+-----------------------------------------------------------------------------------------------
+  V6 Config B                                   acc=78.9%  prec=72.0%  rec=94.7%  F1= 0.818  TP=36 FP=14 TN=24 FN=2  
+  V10 lambda=0.1                                acc=85.5%  prec=82.9%  rec=89.5%  F1= 0.861  TP=34 FP=7 TN=31 FN=4  
+  V10_5b log R*                                 acc=84.2%  prec=79.5%  rec=92.1%  F1= 0.854  TP=35 FP=9 TN=29 FN=3  
+
+  V6b + V10 AND                                 acc=86.8%  prec=85.0%  rec=89.5%  F1= 0.872  TP=34 FP=6 TN=32 FN=4  
+  V6b + V10_5b AND                              acc=86.8%  prec=85.0%  rec=89.5%  F1= 0.872  TP=34 FP=6 TN=32 FN=4  
+  V10 + V10_5b AND                              acc=86.8%  prec=86.8%  rec=86.8%  F1= 0.868  TP=33 FP=5 TN=33 FN=5  
+  Triple AND                                    acc=86.8%  prec=86.8%  rec=86.8%  F1= 0.868  TP=33 FP=5 TN=33 FN=5  
+  V6b + V10 + V10_5b OR (0.4)                   acc=75.0%  prec=66.7%  rec=100.0%  F1= 0.800  TP=38 FP=19 TN=19 FN=0  
+  avg V6b+V10+V10_5b (thr=0.5)                  acc=84.2%  prec=79.5%  rec=92.1%  F1= 0.854  TP=35 FP=9 TN=29 FN=3  
