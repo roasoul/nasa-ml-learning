@@ -1,0 +1,12 @@
+CAVEAT: V5 was trained on the old 100-TCE kepler_tce.pt
+        dataset. The V6/V10 test set may overlap V5's train.
+
+V5 + V10 ensemble on the 76-TCE seed=42 test set
+------------------------------------------------------------------------------------------
+  V5 alone (thr=0.5)                       acc=68.4%  prec=64.0%  rec=84.2%  F1= 0.727  TP=32 FP=18 TN=20 FN=6  
+  V10 alone (thr=0.5)                      acc=85.5%  prec=82.9%  rec=89.5%  F1= 0.861  TP=34 FP=7 TN=31 FN=4  
+
+  A. 0.3*v5 + 0.7*v10 (thr=0.5)            acc=81.6%  prec=77.3%  rec=89.5%  F1= 0.829  TP=34 FP=10 TN=28 FN=4  
+  B. 0.5*v5 + 0.5*v10 (thr=0.5)            acc=78.9%  prec=73.9%  rec=89.5%  F1= 0.810  TP=34 FP=12 TN=26 FN=4  
+  C. v5>0.3 OR v10>0.5                     acc=63.2%  prec=58.1%  rec=94.7%  F1= 0.720  TP=36 FP=26 TN=12 FN=2  
+  D. v5>0.5 AND v10>0.5                    acc=82.9%  prec=83.8%  rec=81.6%  F1= 0.827  TP=31 FP=6 TN=32 FN=7  
