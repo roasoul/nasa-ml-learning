@@ -1,0 +1,13 @@
+Device: cuda
+Figure 1/2 showcase: planet=K00017.01, FP=K06235.01
+Generating figures...
+  wrote notebooks\figures\diagnostic_phase_aligned.png
+  wrote notebooks\figures\layer_activations.png
+  wrote notebooks\figures\curriculum_pr_curve.png
+  wrote notebooks\figures\pr_operating_points.png
+
+Done. Figures written to notebooks/figures/:
+  diagnostic_phase_aligned.png  (165.2 KB)
+  layer_activations.png  (178.1 KB)
+  curriculum_pr_curve.png  (66.8 KB)
+  pr_operating_points.png  (90.1 KB)
