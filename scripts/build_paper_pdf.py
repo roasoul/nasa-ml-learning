@@ -106,6 +106,7 @@ detection
 
 __BODY__
 
+\clearpage
 \bibliographystyle{mnras}
 \bibliography{references}
 
