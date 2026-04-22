@@ -23,9 +23,10 @@ ROOT = Path(__file__).resolve().parent.parent
 MD_SRC = ROOT / "docs" / "paper" / "paper_draft.md"
 BUILD = ROOT / "docs" / "paper" / "build"
 FIG_SRC = ROOT / "notebooks" / "figures"
-# v2 adds geometry + \resizebox around tables + \linewidth on all
-# figures + \sloppy to fix right-edge clipping seen in v1.
-FINAL_PDF = ROOT / "docs" / "paper" / "paper_final_v2.pdf"
+BIB_SRC = ROOT / "docs" / "paper" / "references.bib"
+# v3 adds a \citep{}-driven bibliography (references.bib, mnras style).
+# v2 fixed the right-edge clipping; v1 had no margin/resizebox fixes.
+FINAL_PDF = ROOT / "docs" / "paper" / "paper_final_v3.pdf"
 
 
 # Abstract extracted verbatim for the \begin{abstract} block (since MNRAS
@@ -105,6 +106,9 @@ detection
 
 __BODY__
 
+\bibliographystyle{mnras}
+\bibliography{references}
+
 \bsp
 \label{lastpage}
 \end{document}
@@ -173,6 +177,11 @@ def prepare_build_dir(md: str) -> tuple[Path, list[str]]:
 
     md_path = BUILD / "paper_body.md"
     md_path.write_text(md, encoding="utf-8")
+
+    # Copy the BibTeX file next to the compiled tex so bibtex can find it.
+    if BIB_SRC.exists():
+        shutil.copy2(BIB_SRC, BUILD / "references.bib")
+
     return md_path, figures
 
 
@@ -204,6 +213,7 @@ _UNICODE_TO_TEX = {
     "−": r"\ensuremath{-}",
     "²": r"\ensuremath{^{2}}",
     "³": r"\ensuremath{^{3}}",
+    "⁴": r"\ensuremath{^{4}}",
     "≥": r"\ensuremath{\geq}",
     "≤": r"\ensuremath{\leq}",
     "≠": r"\ensuremath{\neq}",
@@ -374,7 +384,10 @@ def write_final_tex(body_tex: Path) -> Path:
 
 
 def run_tectonic(final_tex: Path) -> Path:
-    cmd = ["tectonic", "--keep-intermediates",
+    # --reruns sets the TeX pass cap. Default 6 is just shy of what a
+    # natbib+bibtex cycle needs when the .bbl has to be regenerated from
+    # scratch; 10 covers the convergence on a cold cache.
+    cmd = ["tectonic", "--keep-intermediates", "--reruns", "10",
            "--outdir", str(BUILD), str(final_tex)]
     log(f"  tectonic: {' '.join(cmd)}")
     subprocess.run(cmd, check=True)

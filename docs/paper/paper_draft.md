@@ -18,24 +18,28 @@ F1 = 0.861 / precision = 82.9 % / recall = 89.5 % with 1150
 parameters. A V6 + V10 ensemble lifts F1 to 0.872 (precision 85.0 %)
 and a three-model OR ensemble reaches 100 % recall. **Zero-shot
 transfer to TESS achieves 100 % recall without retraining, compared
-to 63 % for statistical-feature approaches (Malik et al. 2022).**
+to 63 % for statistical-feature approaches \citep{malik2022}.**
 
 ## 1. Introduction
 
-Exoplanet transit surveys (Kepler, K2, TESS) produce millions of
-Threshold Crossing Events (TCEs). The downstream classification
-step — separating true planet transits from eclipsing binaries
-(EBs), stellar variability, and instrumental artefacts — is
-labour-intensive. Prior deep-learning approaches (AstroNet,
-ExoMiner, Malik et al.) depend on large training sets (15 k+ TCEs)
-and dozens of hand-crafted feature views. We investigate whether
-a small physics-informed model can match or beat that with ~1 k
-parameters on a few hundred TCEs.
+Exoplanet transit surveys — Kepler \citep{borucki2010}, K2, and
+TESS \citep{ricker2015} — produce millions of Threshold Crossing
+Events (TCEs). The downstream classification step, separating
+true planet transits from eclipsing binaries (EBs), stellar
+variability, and instrumental artefacts, is labour-intensive.
+Prior deep-learning approaches — AstroNet \citep{shallue2018},
+ExoMiner \citep{valizadegan2022} and its recent ExoMiner++ update
+\citep{valizadegan2025}, and Malik et al.\ \citep{malik2022} —
+depend on large training sets (15 k+ TCEs) and dozens of hand-
+crafted feature views. Recent work also explores false-positive
+rejection using derived planetary parameters \citep{rafaih2025}.
+We investigate whether a small physics-informed model can match or
+beat that with \textasciitilde1\,k parameters on a few hundred TCEs.
 
 ## 2. Background
 
-**Mandel-Agol bias.** The Kepler TCE pipeline fits every candidate
-with a planet transit model. EB durations and eclipse morphologies
+**Mandel-Agol bias \citep{mandel2002}.** The Kepler TCE pipeline
+fits every candidate with a planet transit model. EB durations and eclipse morphologies
 inherit that bias — primary-eclipse shape features extracted from
 the pipeline's folded light curve look planet-consistent even for
 obvious EBs. This was diagnosed in our V7 null results: the
@@ -382,7 +386,8 @@ V6b + V10 AND ensemble remains the session's best F1.
 
 Full code + data pipeline in
 <https://github.com/roasoul/nasa-ml-learning>. Release commit:
-latest on `main`. Run:
+latest on `main`. Light-curve downloading and phase-folding use the
+`lightkurve` package \citep{lightkurve2018}. Run:
 
     python -m src.data.build_dataset --n-per-class 250
     python scripts/run_v10.py                     # reproduces F1 0.861
