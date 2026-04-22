@@ -23,7 +23,9 @@ ROOT = Path(__file__).resolve().parent.parent
 MD_SRC = ROOT / "docs" / "paper" / "paper_draft.md"
 BUILD = ROOT / "docs" / "paper" / "build"
 FIG_SRC = ROOT / "notebooks" / "figures"
-FINAL_PDF = ROOT / "docs" / "paper" / "paper_final.pdf"
+# v2 adds geometry + \resizebox around tables + \linewidth on all
+# figures + \sloppy to fix right-edge clipping seen in v1.
+FINAL_PDF = ROOT / "docs" / "paper" / "paper_final_v2.pdf"
 
 
 # Abstract extracted verbatim for the \begin{abstract} block (since MNRAS
@@ -46,6 +48,9 @@ ABSTRACT_TEXT = (
 
 MNRAS_WRAPPER = r"""\documentclass[referee,usenatbib]{mnras}
 
+% MNRAS already loads \usepackage{geometry}; override the margins with
+% \geometry{...} so tables and figures have more horizontal room.
+\geometry{left=2cm,right=2cm,top=2.5cm,bottom=2.5cm}
 \usepackage{graphicx}
 \usepackage{amsmath}
 \usepackage{hyperref}
@@ -53,6 +58,13 @@ MNRAS_WRAPPER = r"""\documentclass[referee,usenatbib]{mnras}
 \usepackage{longtable}
 \usepackage{calc}
 \usepackage{array}
+
+% Give LaTeX more flexibility to break lines so long \texttt / URLs / table
+% cells don't spill past the right margin (the v1 right-edge clipping).
+\sloppy
+\emergencystretch=3em
+\tolerance=2000
+\hbadness=10000
 
 \graphicspath{{figures/}}
 
@@ -224,16 +236,130 @@ _UNICODE_TO_TEX = {
 }
 
 
+_VERBATIM_ASCII = {
+    "λ": "lambda",
+    "π": "pi",
+    "σ": "sigma",
+    "ρ": "rho",
+    "μ": "mu",
+    "Δ": "Delta",
+    "α": "alpha",
+    "β": "beta",
+    "×": "x",
+    "·": "*",
+    "−": "-",
+    "²": "^2",
+    "³": "^3",
+    "≥": ">=",
+    "≤": "<=",
+    "≠": "!=",
+    "→": "->",
+    "←": "<-",
+    "∈": "in",
+    "∞": "inf",
+    "≈": "~",
+    "∂": "d",
+    "…": "...",
+    "—": "--",
+    "–": "-",
+}
+
+
 def _transliterate_unicode(tex: str) -> str:
-    for src, dst in _UNICODE_TO_TEX.items():
-        tex = tex.replace(src, dst)
-    return tex
+    """Replace Unicode in regular text with \\ensuremath{\\lambda} etc., but
+    inside verbatim environments use ASCII equivalents because verbatim
+    doesn't interpret LaTeX macros — `\\ensuremath` would render literally
+    AND the expanded form (21 chars vs 1) overflows the line."""
+    verb_pat = re.compile(
+        r"(\\begin\{verbatim\}.*?\\end\{verbatim\})", re.DOTALL
+    )
+    parts = verb_pat.split(tex)
+    rebuilt = []
+    for i, chunk in enumerate(parts):
+        if i % 2 == 1:
+            # verbatim block: use ASCII-only replacements, wrap in footnotesize
+            for src, dst in _VERBATIM_ASCII.items():
+                chunk = chunk.replace(src, dst)
+            chunk = "\\begingroup\\footnotesize\n" + chunk + "\n\\endgroup"
+        else:
+            for src, dst in _UNICODE_TO_TEX.items():
+                chunk = chunk.replace(src, dst)
+        rebuilt.append(chunk)
+    return "".join(rebuilt)
+
+
+def _fit_includegraphics(tex: str) -> str:
+    """Force every \\includegraphics to width=\\linewidth so images never
+    spill past the right margin. Preserves keepaspectratio and alt= if
+    pandoc emitted them."""
+    pattern = re.compile(r"\\includegraphics\[([^\]]*)\]")
+    def _rewrite(m):
+        opts = m.group(1)
+        if "width=" in opts:
+            return m.group(0)
+        opts = "width=\\linewidth," + opts
+        return f"\\includegraphics[{opts}]"
+    return pattern.sub(_rewrite, tex)
+
+
+def _wrap_longtables_resizebox(tex: str) -> str:
+    """Wrap every pandoc longtable in \\resizebox so wide tables shrink to
+    fit \\linewidth. longtable supports paging across pages but not scale-
+    to-fit, so we convert each to a plain tabular inside a table float.
+    """
+    start = 0
+    out = []
+    while True:
+        s = tex.find(r"\begin{longtable}", start)
+        if s == -1:
+            out.append(tex[start:])
+            break
+        e = tex.find(r"\end{longtable}", s)
+        if e == -1:
+            out.append(tex[start:])
+            break
+        e += len(r"\end{longtable}")
+        block = tex[s:e]
+
+        tab = block
+        # Strip longtable-only commands.
+        for rm in (
+            r"\endfirsthead",
+            r"\endhead",
+            r"\endfoot",
+            r"\endlastfoot",
+            r"\noalign{}",
+        ):
+            tab = tab.replace(rm, "")
+        # Rename environment.
+        tab = tab.replace(r"\begin{longtable}", r"\begin{tabular}")
+        tab = tab.replace(r"\end{longtable}", r"\end{tabular}")
+        # pandoc emits column widths as p{(\linewidth - N\tabcolsep) * \real{0.XX}} —
+        # inside a \resizebox this can misbehave; keep as-is, the resizebox will
+        # scale the final box either way.
+
+        wrapped = (
+            "\\begin{table}[ht!]\n"
+            "\\centering\\footnotesize\n"
+            "\\resizebox{\\linewidth}{!}{%\n"
+            + tab +
+            "\n}\n"
+            "\\end{table}\n"
+        )
+        out.append(tex[start:s])
+        out.append(wrapped)
+        start = e
+    return "".join(out)
 
 
 def write_final_tex(body_tex: Path) -> Path:
     body = body_tex.read_text(encoding="utf-8")
     # Unicode -> LaTeX macros (MNRAS default font lacks Greek glyphs).
     body = _transliterate_unicode(body)
+    # Force images to \linewidth.
+    body = _fit_includegraphics(body)
+    # Shrink wide tables to fit.
+    body = _wrap_longtables_resizebox(body)
     # Force figure placement near the prose.
     body = body.replace(r"\begin{figure}", r"\begin{figure}[ht!]")
 
