@@ -5,13 +5,13 @@ This is a personal ML/AI learning project. All code here is independent of my
 employer (MathWorks). I retain full IP ownership of everything in this repo.
 
 **Goal:** Build ML/AI skills targeting a NASA Force AI/ML or Data role.
-**Current phase:** V10 COMPLETE. First positive result since V5: the
-5-gate multi-template bank + InvertedGeometryLoss (corrected penalty
-direction) at lambda=0.1 hits F1 0.861, precision 82.9%, recall 89.5%
-— beats V6 Config C (0.815) by 4.6 F1 points and clears the prec>80%
-target. The per-sample routing thesis held: swapping a single global B
-for N parallel fixed-morphology gates unblocks the shape signal that
-V8/V8.5/V9 had access to but could not use.
+**Current phase:** V10 experimental round complete (6/7 main + 2
+deferred). New best: **V6b + V10 AND ensemble, F1 0.872** (prec 85.0%,
+rec 89.5%). V10 alone gets F1 0.861. **TESS zero-shot: 100% recall
+on 4 planets** (vs Malik et al. 63%). M-dwarf fix rescued K00254 but
+trashed precision — needs R* clipping. Diversity loss null. V5+V10
+ensemble null. Exp 4 (2000-TCE scale-up) deferred to next session
+due to 90-min download budget.
 **Degree:** MS AI Engineering at Quantic (starting June 2025)
 
 ---
@@ -129,6 +129,48 @@ Mask:     1 in dip (output < 0), 0 at baseline
   classification cannot catch them.
   **Fix for V6:** add centroid-offset check, odd/even transit depth comparison,
   or V-shape transit analysis as additional channels.
+
+### Post-V10 experiment round: `docs/paper/experiments_final.md`
+Seven experiments on top of V10 λ=0.1. Full ablation table:
+
+| Experiment                    | Acc   | Prec  | Recall | F1    |
+| V6 Config C (baseline)        | 80.3% | 76.7% | 86.8%  | 0.815 |
+| V6 Config B (stored)          | 78.9% | 72.0% | 94.7%  | 0.818 |
+| V10 λ=0.1                     | 85.5% | 82.9% | 89.5%  | 0.861 |
+| Exp 1 — V10 thr=0.40          | 81.6% | 75.0% | 94.7%  | 0.837 |
+| **Exp 2 — V6b+V10 AND**       | **86.8%** | **85.0%** | 89.5% | **0.872** |
+| Exp 2 — V6b+V10 OR            | 76.3% | 68.5% | 97.4%  | 0.804 |
+| Exp 3 — TESS zero-shot        | 87.5% | 80.0% | 100%   | 0.889 |
+| Exp 5 — R*² norm              | 53.9% | 52.1% | 100%   | 0.685 |
+| Exp 6 — diversity loss        | 82.9% | 80.5% | 86.8%  | 0.835 |
+| Exp 7 — V5+V10 best           | 82.9% | 83.8% | 81.6%  | 0.827 |
+| Exp 4 — 2000 TCEs (DEFERRED)  |   —   |   —   |   —    |   —   |
+
+**Key new findings:**
+- **V6b+V10 AND ensemble is the new session best.** Precision
+  jumps from 82.9% to 85.0% by intersecting with V6b's predictions;
+  V6b's FPs are all either rejected by V10 or also suspect.
+- **TESS zero-shot: 100% recall (4/4), 80% precision.** V10 weights
+  trained only on Kepler generalise to TESS without retraining.
+  Beats Malik et al. 2020 TESS baseline (63% recall).
+- **M-dwarf confirmation:** 2 of 4 V10 FN are M-dwarfs (K00254 R*=0.57,
+  K00912 R*=0.59). R*² normalisation rescues them → 100% recall
+  but destabilises training (precision 52%). Fix: clip R* or use
+  log(R*) instead.
+- **K00254.01 is a dataset-level blind spot.** No ensemble / no
+  threshold catches it; both V6 and V10 give it prob ≈ 0.23.
+  Only the R*²-normalised retrain gets it right.
+- **A1 collapse is structural.** Diversity loss didn't help because
+  the penalty operates on gate outputs, and A1 → 0 *helps* pairwise
+  distance. Needs direct amplitude penalty if we want A1 alive.
+
+**Session commits:**
+- 1124d74 V10.5 threshold sweep
+- 5a8b605 V6b+V10 AND ensemble → new best F1 0.872
+- 0a6b273 V5+V10 ensemble → null
+- 6cab651 M-dwarf R*² normalisation
+- 0839602 gate diversity loss → null
+- 598bde6 TESS zero-shot → 100% recall
 
 ### V10 paper draft: `docs/paper/v10_findings.md`
 Full write-up with ablation table (V4→V10), per-TCE V6 vs V10
@@ -534,6 +576,13 @@ Raw light curve
 - [x] V8 + V8.5 shape discrimination — null result, F1 0.795/0.786 ⚠
 - [x] V9 DynamicGeometryLoss — null result, best F1 0.765 at λ=0.5 ⚠
 - [x] V10 multi-template gate bank + inverted loss — **F1 0.861** ✅
+- [x] V10.5 threshold sweep — no threshold hits both targets
+- [x] V6b + V10 AND ensemble — **F1 0.872** (session best) ✅
+- [x] V10 TESS zero-shot — 100% recall, 80% precision ✅
+- [x] V10 M-dwarf R*² norm — rescues K00254 but trashes precision ⚠
+- [x] V10 diversity loss — A1 still collapses, F1 down ⚠
+- [x] V5 + V10 ensemble — V5 drags V10 down, no gain ⚠
+- [ ] V10 + 2000 TCEs scale-up — deferred (~90 min download)
 - [ ] 3Blue1Brown — Neural Networks video 4
 - [ ] 3Blue1Brown — Transformers (chapters 5-7)
 - [ ] Vizuara — Foundations for ML
