@@ -1,0 +1,49 @@
+Device: cuda
+Kepler 1114 — Train: 778  Val: 166  Test: 170
+  lr=1e-05  patience=50  epochs=200  no pos_weight
+
+================================================================
+Curriculum fine-tune starting from src/models/production/v10_f1861.pt
+================================================================
+  Start amplitudes  A1=0.0010 A2=0.0105 A3=0.0086 A4=0.0209 A5=0.0245
+  ep   1  bce=0.4749  geo=-0.0004  val=0.4580  wait=0  A1=0.0010 A2=0.0103 A3=0.0083 A4=0.0206 A5=0.0245
+  ep  25  bce=0.4481  geo=0.0046  val=0.4278  wait=12  A1=0.0010 A2=0.0088 A3=0.0058 A4=0.0193 A5=0.0239
+  ep  50  bce=0.4430  geo=0.0050  val=0.4211  wait=5  A1=0.0010 A2=0.0095 A3=0.0057 A4=0.0203 A5=0.0229
+  ep  75  bce=0.4457  geo=0.0051  val=0.4196  wait=4  A1=0.0010 A2=0.0099 A3=0.0057 A4=0.0212 A5=0.0227
+  ep 100  bce=0.4320  geo=0.0056  val=0.4227  wait=29  A1=0.0010 A2=0.0106 A3=0.0058 A4=0.0220 A5=0.0219
+  early stop at ep 121
+  Final amplitudes  A1=0.0010 A2=0.0099 A3=0.0056 A4=0.0211 A5=0.0226
+
+Kepler 1114 held-out (n=170):
+  acc=80.6%  prec=71.4%  rec=64.8%  F1=0.680  TP=35 FP=14 TN=102 FN=19
+
+Paper 76-TCE test (n=76):
+  acc=73.7%  prec=87.5%  rec=55.3%  F1=0.677  TP=21 FP=3 TN=35 FN=17
+
+========================================================================
+Version                   Prec   Recall      F1  test_n
+------------------------------------------------------------------------
+V10 production           82.9%    89.5%   0.861      76
+V10 1114 noweight        76.2%    59.3%   0.667     170
+V10 curriculum (170)    71.4%   64.8%   0.680     170
+V10 curriculum (76)     87.5%   55.3%   0.677      76
+
+========================================================================
+Triple OR ensemble @ threshold 0.4 on 76-TCE paper test
+========================================================================
+  Original (V6b + V10 production + V10 log)
+    acc=75.0%  prec=66.7%  rec=100.0%  F1=0.800  TP=38 FP=19 TN=19 FN=0
+  Curriculum (V6b + V10 curriculum + V10 log)
+    acc=75.0%  prec=66.7%  rec=100.0%  F1=0.800  TP=38 FP=19 TN=19 FN=0
+
+Version                           Prec   Recall      F1
+------------------------------------------------------------
+Original triple OR              66.7%  100.0%   0.800
+Curriculum triple OR            66.7%  100.0%   0.800
+
+Verdicts:
+  100% recall holds?   YES — 100% recall holds
+  Precision improves?  NO — precision unchanged/worse (66.7% vs 66.7%)
+
+Saved model   -> src/models/taylor_cnn_v10_curriculum.pt
+Saved results -> data/v10_curriculum_results.pt
