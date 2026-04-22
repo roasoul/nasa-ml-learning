@@ -1,0 +1,17 @@
+Device: cuda
+Depth-normalization scale stats: min=0.014 median=0.815 max=1274.133
+Train: 350  Val: 74  Test: 76
+
+Training V10 with R*-normalized depth (lambda=0.1)
+    ep   1  val=0.6932  wait=0  A1=0.0085 A2=0.0105 A5=0.0094
+    early stop at ep 48
+
+V10+M-dwarf: acc=53.9%  prec=52.1%  rec=100.0%  F1=0.685  TP=38 FP=35 TN=3 FN=0
+
+Per-TCE check of the 4 planets V10 missed:
+  K00013.01    truth=PLNT  R*=3.03  depth=4591ppm  V10+Mdwarf prob=0.534 -> PLNT
+  K00912.01    truth=PLNT  R*=0.59  depth=1676ppm  V10+Mdwarf prob=0.614 -> PLNT
+  K00254.01    truth=PLNT  R*=0.57  depth=36912ppm  V10+Mdwarf prob=0.607 -> PLNT
+  K00183.01    truth=PLNT  R*=0.96  depth=18136ppm  V10+Mdwarf prob=0.599 -> PLNT
+
+Saved -> src/models/taylor_cnn_v10_mdwarf.pt
