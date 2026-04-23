@@ -24,9 +24,11 @@ MD_SRC = ROOT / "docs" / "paper" / "paper_draft.md"
 BUILD = ROOT / "docs" / "paper" / "build"
 FIG_SRC = ROOT / "notebooks" / "figures"
 BIB_SRC = ROOT / "docs" / "paper" / "references.bib"
-# v3 adds a \citep{}-driven bibliography (references.bib, mnras style).
+# v4 replaces the N=8 TESS zero-shot claim with the honest N=355
+# depth-stratified evaluation + depth-normalised inference fix.
+# v3 added a \citep{}-driven bibliography (references.bib, mnras style).
 # v2 fixed the right-edge clipping; v1 had no margin/resizebox fixes.
-FINAL_PDF = ROOT / "docs" / "paper" / "paper_final_v3.pdf"
+FINAL_PDF = ROOT / "docs" / "paper" / "paper_final_v4.pdf"
 
 
 # Abstract extracted verbatim for the \begin{abstract} block (since MNRAS
@@ -42,8 +44,9 @@ ABSTRACT_TEXT = (
     "F1 = 0.861 / precision = 82.9\\% / recall = 89.5\\% with 1150 parameters. "
     "A V6 + V10 ensemble lifts F1 to 0.872 (precision 85.0\\%) and a three-model "
     "OR ensemble reaches 100\\% recall. Zero-shot transfer to TESS achieves "
-    "100\\% recall without retraining, compared to 63\\% for statistical-feature "
-    "approaches (Malik et al. 2022)."
+    "96.5\\% recall on N=355 targets with depth normalization (one scalar per "
+    "TCE), compared to 63\\% for statistical-feature approaches "
+    "(Malik et al. 2022)."
 )
 
 

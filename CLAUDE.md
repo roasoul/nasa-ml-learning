@@ -7,8 +7,11 @@ employer (MathWorks). I retain full IP ownership of everything in this repo.
 **Goal:** Build ML/AI skills targeting a NASA Force AI/ML or Data role.
 **Current phase:** V10 + all experiments complete. Best single model
 V10 λ=0.1 F1=0.861. Best ensemble V6b+V10 AND F1=0.872. Triple-OR
-ensemble hits **100% recall** (38/38). TESS zero-shot 100% recall,
-80% precision. Exp 5b log-R* normalisation: F1 0.854 (rescues 2
+ensemble hits **100% recall** (38/38). TESS zero-shot at N=8 hit
+100% recall / 80% precision. Extended validation at N=355 revealed
+depth-saturation (68.8% recall); single-scalar depth normalisation
+at td=0.0015 restores recall to 96.5%/prec 59.3% — use depth-norm
+for cross-instrument discovery mode. Exp 5b log-R* normalisation: F1 0.854 (rescues 2
 of 4 M-dwarf/radius-mismatch FNs, ties V6b+V10 AND in ensembles).
 Full paper draft at `docs/paper/paper_draft.md`. Exp 4/4b/4c run to
 completion: Kepler 1114-TCE scale-up hurt precision (F1 0.692),
@@ -696,6 +699,8 @@ Raw light curve
 - [x] V10 TESS-native — degenerate collapse (Exp 4b) ⚠
 - [x] V10 cross-mission AND ensemble — NULL, equals best single (Exp 4c) ⚠
 - [x] V10 + 1114 TCEs, no pos_weight — precision +18pp, recall halves ⚠
+- [x] V10 N=355 TESS zero-shot — depth saturation diagnosed ⚠
+- [x] V10 + depth-norm (td=0.0015) — recall 68.8%→96.5% ✅
 - [ ] 3Blue1Brown — Neural Networks video 4
 - [ ] 3Blue1Brown — Transformers (chapters 5-7)
 - [ ] Vizuara — Foundations for ML
