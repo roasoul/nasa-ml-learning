@@ -16,10 +16,9 @@ toward known class-separation directions. On a 76-TCE stratified
 Kepler DR25 test set the model (V10) achieves
 F1 = 0.861 / precision = 82.9 % / recall = 89.5 % with 1150
 parameters. A V6 + V10 ensemble lifts F1 to 0.872 (precision 85.0 %)
-and a three-model OR ensemble reaches 100 % recall. **Zero-shot
-transfer to TESS achieves 96.5 % recall on N=355 targets with
-depth normalization (one scalar per TCE), compared to 63 % for
-statistical-feature approaches \citep{malik2022}.**
+and a three-model OR ensemble reaches 100 % recall. The fixed-grid
+phase resampling pipeline is designed for cross-instrument
+deployment; TESS generalisation is evaluated in future work.
 
 ## 1. Introduction
 
@@ -148,7 +147,6 @@ See Figure 10. Numbers below.
 | V10 + V10_5b AND           | 86.8 % | 86.8 % | 0.868  | 76-TCE   | highest precision + balance |
 | V6b + V10 OR @ 0.4         | 68.5 % | 97.4 % | 0.804  | 76-TCE   | V10 recall booster |
 | **Triple OR @ 0.4**        | 66.7 % | **100 %** | 0.800 | 76-TCE | **first 100 % recall** |
-| TESS zero-shot             | 80.0 % | 100 %  | 0.889  | TESS     | no retraining, 8 targets |
 
 **Caveat on V4/V5.** Their 100 % recall was measured on a 16-TCE
 test set sampled from the original 100-TCE dataset — effectively
@@ -204,97 +202,7 @@ Two of four FN are M-dwarfs. Their dips look anomalously deep
 because R* is small, not because the transiter is exotic. This
 motivated Experiment 5b.
 
-### 4.5 TESS generalisation
-
-V10 λ=0.1 weights — trained only on Kepler — applied to 8 TESS
-targets with identical preprocessing (flatten → fold → scale to
-[−π, π] → subtract 1.0 → resample to 200 bins):
-
-| Target           | V10 prob | Prediction | Truth | Outcome |
-|------------------|---------:|------------|-------|---------|
-| TOI-132 b        | 0.928    | PLNT       | PLNT  | OK |
-| TOI-824 b        | 0.757    | PLNT       | PLNT  | OK |
-| TOI-1431 b       | 0.877    | PLNT       | PLNT  | OK |
-| TOI-560 b        | 0.596    | PLNT       | PLNT  | OK |
-| EB TIC 268766053 | 0.317    | FP         | FP    | OK |
-| EB TIC 388104525 | 0.082    | FP         | FP    | OK |
-| EB TIC 229804573 | 0.000    | FP         | FP    | OK |
-| EB TIC 441765914 | 0.762    | PLNT       | FP    | WRONG |
-
-**Recall 100 % (4/4), precision 80.0 %, F1 0.889 on this N=8
-sample.** Beats the Malik et al. 2020 TESS zero-shot baseline of
-63 % recall. Two of 10 original targets skipped (TOI-700 d fold
-failed — long period, sparse coverage; EB TIC 255827488 has no
-SPOC LC).
-
-![Figure 9 — TESS zero-shot comparison: V10 λ=0.1 (trained only on Kepler DR25) vs. published TESS-native baselines. Recall 100% vs. Malik et al. 63%, with no retraining.](../../notebooks/figures/tess_kepler_comparison.png){#fig:tess_kepler width=85%}
-
-#### 4.5.1 Extended evaluation (N=355)
-
-Zero-shot TESS transfer achieves 100 % recall on targets matching
-Kepler's training depth distribution (<2,000 ppm; N=35). Extended
-evaluation on N=355 TESS TOIs (199 CP/KP, 156 FP; dataset
-`data/tess_tce_400.pt`, same preprocessing pipeline) spanning
-1,000-50,000 ppm reveals depth-dependent recall collapse
-(68.8 % overall at p > 0.4) caused by gate-amplitude saturation:
-V10's dominant gates are calibrated to Kepler's 1-5k ppm depth
-range, and deep hot-Jupiter transits saturate all five gates
-identically, eliminating morphological contrast. Production V10
-weights have never seen TESS data, so this remains zero-shot.
-
-| Depth (ppm)     | N  | Recall  | Median p_v10 |
-|-----------------|---:|--------:|-------------:|
-| 0 – 2,000       | 35 | 100.0 % | 0.87         |
-| 2,000 – 5,000   | 36 | 94.4 %  | 0.77         |
-| 5,000 – 10,000  | 48 | 79.2 %  | 0.52         |
-| 10,000 – 20,000 | 60 | 45.0 %  | 0.38         |
-| 20,000 – 50,000 | 20 | 15.0 %  | 0.10         |
-
-Median `p_v10` is monotone-decreasing in depth, from 0.87 at
-Kepler-median depths to 0.10 at 20-50k ppm. The N=8 paper sample
-all sat in the 2-6k ppm band where V10 scores above 0.7 reliably.
-
-#### 4.5.2 Fix — depth-normalised inference
-
-A single-scalar depth normalisation
-(`flux → flux / |min(flux)|`, target depth 0.0015) recovers recall
-to 96.5 % (7 FN from 199 planets) across all depth bins with
-negligible precision cost (57.3 % → 59.3 %). The same scalar is
-applied to `primary_flux`, `secondary_flux`, and `odd_even_diff`
-so inter-channel ratios are preserved, maintaining EB rejection
-capability.
-
-| target_depth | Recall  | Prec   | F1      | FN |
-|-------------:|--------:|-------:|--------:|---:|
-| baseline     |  68.8 % | 57.3 % | 0.626   | 62 |
-| 0.0010       |  98.5 % | 57.5 % | 0.726   |  3 |
-| **0.0015**   |**96.5%**|**59.3%**|**0.734**|**7**|
-| 0.0020       |  92.5 % | 59.9 % | 0.727   | 15 |
-| 0.0030       |  83.9 % | 60.9 % | 0.706   | 32 |
-| 0.0050       |  68.8 % | 64.3 % | 0.665   | 62 |
-
-Per-depth-bin recall, baseline vs. td=0.0015:
-
-| Depth (ppm)     | N  | Baseline | Depth-norm | Δ   |
-|-----------------|---:|---------:|-----------:|----:|
-| 0 – 2,000       | 35 | 100 %    | 100 %      | +0  |
-| 2,000 – 5,000   | 36 |  94 %    |  97 %      | +3  |
-| 5,000 – 10,000  | 48 |  79 %    |  96 %      | +17 |
-| 10,000 – 20,000 | 60 |  45 %    |  97 %      | +52 |
-| 20,000 – 50,000 | 20 |  15 %    |  90 %      | +75 |
-
-#### 4.5.3 Recommendation
-
-We recommend applying depth normalisation as a preprocessing
-step for cross-instrument deployment. The remaining precision
-limitation (59 %) at long-period shallow candidates is a separate
-failure mode requiring TESS-calibrated retraining.
-
-![Figure 10 — V10 N=355 TESS zero-shot. Left: p_v10 distribution by class at baseline; strong overlap drives the 57% precision. Right: p_v10 vs. SNR, x = misclassified at p > 0.4. Missed planets scatter across the SNR range, not bottom-stratified — the failure is depth-driven, not SNR-driven.](../../notebooks/figures/tess_zeroshot_n355.png){#fig:tess_n355 width=85%}
-
-![Figure 11 — Depth-normalised inference. Left: target_depth sweep showing recall recovery from 68.8% to 98.5% as td drops, with F1 peaking at td=0.0015. Right: per-depth-bin recall, baseline vs. depth-norm. Recovery is strongest in the deep bins (+52 pp at 10-20k ppm, +75 pp at 20-50k ppm), confirming the gate-saturation diagnosis.](../../notebooks/figures/tess_zeroshot_n355_depthnorm.png){#fig:tess_depthnorm width=85%}
-
-### 4.6 Stellar-radius normalisation (Experiment 5b)
+### 4.5 Stellar-radius normalisation (Experiment 5b)
 
 Motivated by the M-dwarf FN analysis. Goal: rescale each TCE's
 flux by a function of R* so M-dwarf deep dips look sun-like.
@@ -316,7 +224,7 @@ a little precision for a recall bump.
 Log R* variant as a V10_5b alternative model. Its ensemble with
 V6b matches the V6b+V10 AND record at F1 = 0.872.
 
-### 4.7 Ensemble results
+### 4.6 Ensemble results
 
 See Figure 11 (precision vs recall scatter).
 
@@ -350,13 +258,11 @@ sidesteps it. Consistent with that interpretation: A1 (the planet
 template) is *unused* in every V10 run. The discriminator
 recognises FP signatures rather than planet signatures.
 
-## 5.5 Scale-up and cross-mission retraining (null results)
+## 5.5 Scale-up retraining (null results)
 
 We added a scaled-up Kepler dataset (1114 TCEs via subsampling
 `koi_disposition in ('CONFIRMED', 'FALSE POSITIVE')` evenly across
-the depth-sorted archive) and a native TESS dataset (355 TOIs, SPOC
-2-min cadence — 45 of a target 400 were dropped because MAST has no
-2-min postage stamps for those TICs). `pos_weight = n_FP / n_CONF`
+the depth-sorted archive). `pos_weight = n_FP / n_CONF`
 was applied as a per-sample weight on the sigmoid-output BCE so the
 V10 head is unchanged. Seeds and splits (seed=42 stratified 70/15/15)
 match the earlier experiments.
@@ -371,10 +277,6 @@ learned solution did not change — only its calibration did. The
 FPs, and `pos_weight=2.18` moves the threshold toward "planet".
 At 1150 trainable parameters the model is not expressive enough to
 absorb the extra diversity without over-firing on ambiguous FPs.
-TESS 355-zero-shot from the 1114-TCE model: F1 0.547 — notably
-worse than Exp 3's V10-500 → TESS F1 0.889 on 15 hand-picked hot
-Jupiters, reflecting the harder 355-TCE TOI mix rather than a
-regression in the model.
 
 **Exp 4 no-weight — isolating pos_weight from data difficulty.**
 Re-ran Exp 4 with plain `nn.BCELoss()` (no class weighting) to
@@ -383,8 +285,7 @@ Precision recovered strongly on both test sets — 76.2% on the
 170-TCE held-out (up from 58.2%) and 89.5% on the paper's 76-TCE
 test (higher than V10-500's 82.9%). But recall halved: 59.3% on
 170, 44.7% on 76 (vs V10-500's 89.5%). F1 is 0.667 / 0.596, both
-still below V10-500's 0.861. TESS 355 zero-shot drops to F1 0.388
-with recall 28.6%. Amplitudes are weaker than V10-500 too
+still below V10-500's 0.861. Amplitudes are weaker than V10-500 too
 (A4 0.012 vs 0.021, A5 0.023 vs 0.025), consistent with a
 less-confident learned discriminator.
 
@@ -398,43 +299,29 @@ cannot find a single boundary that clears 0.861 on the broader
 mix. Scaling the data requires scaling the architecture
 alongside it.
 
-**Exp 4b — V10 trained natively on TESS.** Collapsed to an
-always-positive classifier: TN=FN=0 on both the TESS 55-TCE test
-split and the Kepler 76-TCE test set (cross-mission TESS→Kepler
-zero-shot). Val loss plateaued at 0.61 after epoch 1; amplitudes
-stayed within 0.001 of their 0.01 init. The 248-sample training
-set, the mild 56/44 class imbalance, and the absence of a TESS
-SNR cache (which left the InvertedGeometryLoss at mid-strength for
-every sample) together provided insufficient gradient signal to
-escape the "predict 1 everywhere" local minimum. A real F1 for
-TESS-native training will need longer patience, LR warmup, or a
-per-target TESS SNR cache.
-
-**Exp 4c — cross-mission AND ensemble.** Because the TESS-native
-model votes 1 on every sample, `AND` reduces to the other model's
-prediction: Kepler-76 AND = V10-500's exact result (F1 0.861), TESS-55
-AND = V10-1114 zero-shot's exact result (F1 0.638). No gain over
-the existing V6b + V10 AND ensemble (F1 0.872).
-
 **Interpretation.** The 500-TCE V10 baseline is a surprisingly
-tight local optimum. Scaling the Kepler data alone or moving to a
-different mission without also scaling the architecture and the
-training recipe breaks either calibration or convergence. The
-V6b + V10 AND ensemble remains the session's best F1.
+tight local optimum. Scaling the Kepler data alone without also
+scaling the architecture and the training recipe breaks calibration.
+The V6b + V10 AND ensemble remains the session's best F1.
 
 ![Figure 12 — Precision-recall curves for V6b, V10 production, V10 log-R*, and V10 curriculum on the 76-TCE test set. Markers show the threshold-0.5 operating point of each model.](../../notebooks/figures/curriculum_pr_curve.png){#fig:curriculum_pr width=80%}
 
 ## 6. Future Work
 
-- **Precision at long-period shallow FPs (TESS).** The N=355
-  analysis (§4.5) shows depth-normalised inference recovers recall
-  to 96.5 % but leaves precision at 59 %. The leaked FPs cluster
-  at long period (P > 15 d) and shallow depth (<5 000 ppm), with
-  low SNR (3–6). These targets look dip-shaped in the folded view
-  but lack the per-transit structure that separates planets from
-  centroid-offset or contamination FPs. A depth-stratified retrain
-  or a dedicated long-period precision classifier is the obvious
-  next experiment.
+- **TESS cross-instrument generalisation.** Cross-instrument
+  generalisation to TESS presents a fundamental depth-calibration
+  challenge. V10's gate amplitudes are tuned to Kepler's 1–5k ppm
+  depth distribution; deep TESS targets (>10k ppm) saturate all
+  five gates identically, collapsing recall to 15 % for the
+  20–50k ppm bin. A naive depth normalisation (scaling each TCE
+  to a fixed target depth) recovers planet recall to 96.5 % on
+  N=355 TESS TOIs but simultaneously erases the absolute-depth
+  eclipsing binary rejection signal the model implicitly learned
+  from Kepler training data — false alarm rate on deep EBs rises
+  from 20 % to 87 %. Future work: stratified depth normalisation
+  that preserves depth ordering while compressing dynamic range,
+  or depth as an explicit auxiliary scalar input alongside
+  normalised flux.
 - **Scale architecture alongside data.** The 1150-parameter V10
   held its learned geometry on 1114 TCEs but miscalibrated;
   next step is a wider CNN (32→64 filters) plus the MLP head
@@ -443,9 +330,10 @@ V6b + V10 AND ensemble remains the session's best F1.
 - **M-dwarf handling.** Log-R* helps but doesn't close the gap.
   Future work: per-class stellar prior, or explicit planet
   radius in Earth/Jupiter units as an auxiliary input.
-- **Roman Space Telescope / PLATO generalisation.** TESS
-  zero-shot already works; these next-mission cadences are
-  similar enough that the gate bank should carry over.
+- **Roman Space Telescope / PLATO generalisation.** These
+  next-mission cadences are similar enough to Kepler's that the
+  gate bank should carry over, subject to the same depth-
+  calibration considerations noted above.
 - **ECG cross-domain.** The Taylor-gate layer applied to
   cardiac waveforms (RLC physical model: inductive R-peak,
   capacitive T-wave, asymmetric QRS). Planned PTB-XL +
@@ -468,15 +356,10 @@ latest on `main`. Light-curve downloading and phase-folding use the
     python -m src.data.build_dataset --n-per-class 250
     python scripts/run_v10.py                     # reproduces F1 0.861
     python scripts/exp2_v6b_v10_ensemble.py       # reproduces F1 0.872
-    python scripts/exp3_tess_zeroshot.py          # reproduces TESS 100% recall
-    # Exp 4 / 4b / 4c — scale-up and cross-mission (null results)
+    # Exp 4 — scale-up (null result)
     python -m src.data.build_dataset \
         --n-per-class 1000 --output data/kepler_tce_2000.pt
-    python -m src.data.build_dataset \
-        --n-per-class 200 --mission TESS --output data/tess_tce_400.pt
     python scripts/run_v10_1114.py                # Exp 4  — F1 0.692
     python scripts/run_v10_1114_noweight.py       # Exp 4 no-weight — F1 0.667
-    python scripts/run_v10_tess.py                # Exp 4b — degenerate
-    python scripts/run_v10_cross_ensemble.py      # Exp 4c — null
 
 All figures in `notebooks/figures/`.

@@ -24,8 +24,11 @@ MD_SRC = ROOT / "docs" / "paper" / "paper_draft.md"
 BUILD = ROOT / "docs" / "paper" / "build"
 FIG_SRC = ROOT / "notebooks" / "figures"
 BIB_SRC = ROOT / "docs" / "paper" / "references.bib"
-# v4 replaces the N=8 TESS zero-shot claim with the honest N=355
-# depth-stratified evaluation + depth-normalised inference fix.
+# v4 removes all TESS zero-shot claims: the N=355 depth-normalised
+# result failed the Concern 3 EB control experiment (FA rate on deep
+# EBs rose from 20% to 87% under normalisation — the model had been
+# using absolute depth as an implicit EB signal). TESS moved to
+# Future Work. Kepler F1=0.872 result unchanged.
 # v3 added a \citep{}-driven bibliography (references.bib, mnras style).
 # v2 fixed the right-edge clipping; v1 had no margin/resizebox fixes.
 FINAL_PDF = ROOT / "docs" / "paper" / "paper_final_v4.pdf"
@@ -43,10 +46,9 @@ ABSTRACT_TEXT = (
     "76-TCE stratified Kepler DR25 test set the model (V10) achieves "
     "F1 = 0.861 / precision = 82.9\\% / recall = 89.5\\% with 1150 parameters. "
     "A V6 + V10 ensemble lifts F1 to 0.872 (precision 85.0\\%) and a three-model "
-    "OR ensemble reaches 100\\% recall. Zero-shot transfer to TESS achieves "
-    "96.5\\% recall on N=355 targets with depth normalization (one scalar per "
-    "TCE), compared to 63\\% for statistical-feature approaches "
-    "(Malik et al. 2022)."
+    "OR ensemble reaches 100\\% recall. The fixed-grid phase resampling pipeline "
+    "is designed for cross-instrument deployment; TESS generalisation is "
+    "evaluated in future work."
 )
 
 
