@@ -233,6 +233,54 @@ Seven experiments on top of V10 λ=0.1. Full ablation table:
   V10 500's 0.861; on TESS 55 the AND F1 is identically V10 1114's
   zero-shot 0.638. No gain — V6b+V10 AND F1 0.872 remains session best.
 
+### DR25 batch scoring + precision filter analysis (post-paper)
+
+Applied V6b+V10 AND ensemble to three ~850-1000 TCE batches of the full
+Kepler DR25 catalog. Key results:
+
+| Batch | TCEs | F1    | False alarms | Missed confirmed |
+|-------|------|-------|--------------|-----------------|
+| 1     | 850  | 0.775 | 110          | 0               |
+| 2     | 850  | 0.735 | 288          | 0               |
+| 3     | 1000 | 0.725 | 349          | 17              |
+
+- F1 degrades from 0.872 (curated 76-TCE test) to 0.725-0.775 on broader
+  DR25 distribution — expected generalisation gap.
+- AND ensemble misses confirmed planets where V10 is confident but V6b
+  disagrees: K01797.01 (p_v10=0.832, p_v6b=0.151), K01911.01 (p_v10=0.811,
+  p_v6b=0.476).
+- 0 confirmed planets found in DR25 FP archive.
+- Artefacts: `data/kepler_dr25_1k_scores.csv`, `data/kepler_dr25_2k_scores.csv`,
+  `data/batch3_candidates_verified.csv`.
+
+**Weighted vote sweep** (`scripts/weighted_ensemble_v2.py`):
+- 0.7*p_v10 + 0.3*p_v6b at thr=0.40 recovers 9/17 missed planets from
+  batch 3 (vs 0 with hard AND), but retains all 349 FAs at that threshold.
+- Results: `data/weighted_ensemble_sweep.csv`.
+
+**Stellar radius precision filter exploration** (`scripts/precision_filter_v1.py`,
+`scripts/validate_rule_a.py`):
+
+| Rule | Definition | FAs rejected | Planets lost | Verdict |
+|------|-----------|-------------|--------------|---------|
+| A | stellar_r > 2.0 | 113/747 (15.1%) | 15 | REJECT |
+| D | stellar_r > 10.0 | 17/747 (2.3%) | 0 | Marginal — free filter |
+| E | stellar_r > 2.0 AND depth/r² < 100 | 89/747 (11.9%) | 8 | REJECT |
+
+Root cause of failure: a real small planet transiting a subgiant (2-8 Rsun)
+produces the same (stellar_r, depth_ppm) signature as a background EB
+contaminating a giant's aperture. No algebraic rule on these two columns
+can separate them. Confirmed planets on 2-8 Rsun hosts have depth/r² = 8-85,
+overlapping the FA population completely.
+
+**V10.2 design direction:**
+- Rule D (stellar_r > 10.0) is the only safe post-filter: apply it free,
+  ~2% FA cut, zero recall cost.
+- The main precision lever is the weighted vote (0.7/0.3), not filtering.
+- Architecture scaling (wider CNN, more parameters) needed alongside the
+  larger dataset — Exp 4 showed data scaling alone collapses precision.
+- Results: `data/precision_filter_results.csv`, `data/rule_a_validation.csv`.
+
 ### Data infrastructure — build_dataset.py (now multi-mission)
 `src/data/build_dataset.py` supports: `--mission Kepler|TESS`, `--resume
 path.pt` (skips already-downloaded TCEs by name, appends new ones), `--seed`,
@@ -701,6 +749,10 @@ Raw light curve
 - [x] V10 + 1114 TCEs, no pos_weight — precision +18pp, recall halves ⚠
 - [x] V10 N=355 TESS zero-shot — depth saturation diagnosed ⚠
 - [x] V10 + depth-norm (td=0.0015) — recall 68.8%→96.5% ✅
+- [x] DR25 batch scoring (3 batches, ~2700 TCEs) — F1 0.725-0.775 ✅
+- [x] Weighted vote sweep (0.7/0.3) — recovers 9/17 missed planets ✅
+- [x] Stellar radius filter (Rules A/D/E) — Rule D only safe (2% FA cut) ⚠
+- [ ] V10.2 — weighted vote + Rule D + architecture scaling
 - [ ] 3Blue1Brown — Neural Networks video 4
 - [ ] 3Blue1Brown — Transformers (chapters 5-7)
 - [ ] Vizuara — Foundations for ML
