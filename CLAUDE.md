@@ -281,6 +281,19 @@ overlapping the FA population completely.
   larger dataset — Exp 4 showed data scaling alone collapses precision.
 - Results: `data/precision_filter_results.csv`, `data/rule_a_validation.csv`.
 
+**V10.2 attempt 1: depth-stratified retraining (NULL RESULT)**
+- Built 626-TCE depth-stratified set from kepler_tce_2000.pt (bins 300-1k,
+  1k-3k, 3k-10k, 10k+ ppm; balanced confirmed/FP per bin; seed=42).
+- Retrained V10 architecture unchanged (1150 params, lambda=0.1 winner).
+- Results: curated F1 0.861 → 0.824 (regression), DR25 broad flat/worse
+  across all three batches (B1: 0.784→0.743, B2: 0.740→0.739, B3: 0.727→0.711).
+- Root cause: 1150 params insufficient to generalise across a 500x depth range
+  (300–50,000 ppm) even with balanced training data. The geometry loss is
+  calibrated to the original depth distribution and does not rebalance for
+  deep (3k–10k ppm) FAs. Architecture scaling needed alongside data change.
+- Stratified weights NOT saved to production. Scripts: `scripts/build_stratified_dataset.py`,
+  `scripts/run_v10_stratified.py`, `scripts/eval_v10_stratified.py`.
+
 ### Data infrastructure — build_dataset.py (now multi-mission)
 `src/data/build_dataset.py` supports: `--mission Kepler|TESS`, `--resume
 path.pt` (skips already-downloaded TCEs by name, appends new ones), `--seed`,
@@ -752,7 +765,8 @@ Raw light curve
 - [x] DR25 batch scoring (3 batches, ~2700 TCEs) — F1 0.725-0.775 ✅
 - [x] Weighted vote sweep (0.7/0.3) — recovers 9/17 missed planets ✅
 - [x] Stellar radius filter (Rules A/D/E) — Rule D only safe (2% FA cut) ⚠
-- [ ] V10.2 — weighted vote + Rule D + architecture scaling
+- [x] V10.2 attempt 1 — depth-stratified retraining — NULL, regression on curated ⚠
+- [ ] V10.2 attempt 2 — architecture scaling (wider CNN) + depth-stratified data
 - [ ] 3Blue1Brown — Neural Networks video 4
 - [ ] 3Blue1Brown — Transformers (chapters 5-7)
 - [ ] Vizuara — Foundations for ML
