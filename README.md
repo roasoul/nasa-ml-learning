@@ -12,26 +12,25 @@ Preprint: https://doi.org/10.5281/zenodo.19696691
 - **TESS zero-shot:** 100% recall, 80% precision
 - **Paper draft:** `docs/paper/paper_draft.md`
 
-## Confirmed Planet Recoveries from DR25 False Positive Archive
+## DR25 Batch Scoring (3 batches, ~2700 TCEs)
 
-Planets recovered by V10+V6b AND ensemble that were
-marked FALSE POSITIVE in Kepler DR25 but subsequently
-confirmed as genuine exoplanets by independent methods.
+Applied V10+V6b AND ensemble to Kepler DR25 catalog.
 
-| KOI | Name | p_v10 | p_v6b | Depth (ppm) | Period (d) | Radius (R⊕) | NASA Confirmation |
-|-----|------|-------|-------|-------------|------------|-------------|-------------------|
-| K01227.01 | Kepler-1227 b | 0.9963 | 0.8420 | 20,739 | TBD | TBD | [NASA Archive](https://exoplanetarchive.ipac.caltech.edu/overview/Kepler-1227) |
-| K01829.01 | Kepler-1829 b | 0.9200 | 0.5936 | 2,941 | 5.19 | 2.48 | [NASA Archive](https://exoplanetarchive.ipac.caltech.edu/overview/Kepler-1829) |
-| K00946.01 | Kepler-946 b  | 0.8805 | 0.7412 | 1,273 | 11.79 | 1.92 | [NASA Archive](https://exoplanetarchive.ipac.caltech.edu/overview/Kepler-946) |
-| K03289.01 | Kepler-1455 b | 0.8805 | 0.7394 | 1,047 | 49.30 | 2.16 | [NASA Archive](https://exoplanetarchive.ipac.caltech.edu/overview/Kepler-1455) |
+| Batch | TCEs | F1    | False alarms | Missed confirmed |
+|-------|------|-------|--------------|-----------------|
+| 1     | 850  | 0.775 | 110          | 0               |
+| 2     | 850  | 0.735 | 288          | 0               |
+| 3     | 1000 | 0.725 | 349          | 17              |
 
-> **Notes:**
-> - All four marked `FALSE POSITIVE` in Kepler DR25 cumulative KOI catalog
-> - Both V10 and V6b independently agreed → AND ensemble prediction = PLANET
-> - Kepler-1455 b equilibrium temperature ~295K — within or near habitable zone
-> - Recovery rate: 4/4 top candidates verified (full DR25 run in progress)
-> - Root cause: Mandel-Agol pipeline bias documented in V7 null result
->   causes genuine planets to inherit EB-like duration signatures → miscategorized as FP
+Key findings:
+- F1 drops from 0.872 (curated test) to 0.725-0.775
+  (broader distribution) — expected generalisation gap
+- AND ensemble misses confirmed planets where V10
+  is confident but V6b disagrees:
+  K01797.01: p_v10=0.832, p_v6b=0.151 → missed
+  K01911.01: p_v10=0.811, p_v6b=0.476 → missed
+- 0 confirmed planets found in DR25 FP archive
+- Motivates weighted ensemble for V10.2
 
 ## Citation
 
