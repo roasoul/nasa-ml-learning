@@ -1,0 +1,4 @@
+batch,tce_total,confirmed,fa_before,fa_after,fa_rejected,fa_pct,planets_lost
+Batch 1,850,350,110,95,15,13.6,8
+Batch 2,850,430,288,250,38,13.2,7
+Batch 3,366,17,349,289,60,17.2,0
