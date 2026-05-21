@@ -1,0 +1,4 @@
+rule,fa_rejected,fa_total,confirmed_lost,confirmed_total,missed_lost,missed_total
+A,60,349,0,17,0,17
+B,7,349,0,17,0,17
+C,65,349,0,17,0,17
