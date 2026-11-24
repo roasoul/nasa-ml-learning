@@ -42,8 +42,8 @@ If you use this code or paper in your research, please cite:
   title     = {Taylor-CNN: Physics-Informed Transit
                Classification with a Multi-Template Gate Bank},
   year      = {2026},
-  doi       = {10.5281/zenodo.15696691},
-  url       = {https://doi.org/10.5281/zenodo.15696691},
+  doi       = {10.5281/zenodo.19696691},
+  url       = {https://doi.org/10.5281/zenodo.19696691},
   note      = {Zenodo preprint}
 }
 ```
