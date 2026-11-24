@@ -8,7 +8,7 @@ title: "Taylor-CNN: Physics-Informed Transit Classification with a Multi-Templat
 version: 1.0.0
 date-released: 2026-04-22
 url: "https://github.com/roasoul/nasa-ml-learning"
-doi: 10.5281/zenodo.15696691
+doi: 10.5281/zenodo.19696691
 license: CC-BY-4.0
 abstract: >
   Taylor-CNN is a physics-informed 1D CNN for exoplanet
@@ -32,6 +32,6 @@ preferred-citation:
       affiliation: Independent Researcher
   title: "Taylor-CNN: Physics-Informed Transit Classification with a Multi-Template Gate Bank"
   year: 2026
-  doi: 10.5281/zenodo.15696691
-  url: "https://doi.org/10.5281/zenodo.15696691"
+  doi: 10.5281/zenodo.19696691
+  url: "https://doi.org/10.5281/zenodo.19696691"
   notes: "Zenodo preprint"
